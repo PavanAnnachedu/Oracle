@@ -1,0 +1,79 @@
+CREATE OR ALTER PROCEDURE [SalesForce].[UpdateWaterMarkSP1]
+AS
+BEGIN
+ SET NOCOUNT ON;
+
+ DECLARE
+ @Sql NVARCHAR(MAX),
+ @Id BIGINT,
+ @SchemaName VARCHAR(128),
+ @TableName VARCHAR(128),
+ @WaterMarkField VARCHAR(128),
+ @NewWaterMarkValue DATETIME2(6);
+
+ DROP TABLE IF EXISTS [WH_MetaData].[SalesForce].[WaterMarkProcessing];
+
+ CREATE TABLE [WH_MetaData].[SalesForce].[WaterMarkProcessing] (
+ Id BIGINT,
+ SchemaName VARCHAR(128),
+ TableName VARCHAR(128),
+ WaterMarkField VARCHAR(128),
+ NewWaterMarkValue DATETIME2(6)
+ );
+
+ INSERT INTO [WH_MetaData].[SalesForce].[WaterMarkProcessing]
+ (Id, SchemaName, TableName, WaterMarkField)
+ SELECT
+ Id,
+ SilverSchemaName,
+ SilverTableName,
+ WaterMarkField
+ FROM [WH_MetaData].[SalesForce].[IncrementalConfigETL_DirectTable] 
+ WHERE IsFullLoad = 0
+ AND IsActive = 1;
+
+ PRINT 'Total tables to process: ' + CAST(@@ROWCOUNT AS VARCHAR(10));
+
+ WHILE EXISTS (SELECT 1 FROM [WH_MetaData].[SalesForce].[WaterMarkProcessing])
+ BEGIN
+ SELECT TOP 1
+ @Id = Id,
+ @SchemaName = SchemaName,
+ @TableName = TableName,
+ @WaterMarkField = WaterMarkField
+ FROM [WH_MetaData].[SalesForce].[WaterMarkProcessing];
+
+ PRINT 'Processing Id: ' + CAST(@Id AS VARCHAR(10)) +
+' | Table: ' + ISNULL(@SchemaName, '') + '.' + ISNULL(@TableName, '');
+
+ SET @NewWaterMarkValue = NULL;
+
+ BEGIN TRY
+
+ SET @Sql = N'SELECT @NewWaterMarkValue = MAX(' + QUOTENAME(@WaterMarkField) + ')
+ FROM LH_Silver.' + QUOTENAME(@SchemaName) + '.' + QUOTENAME(@TableName);
+
+ EXEC sp_executesql
+ @Sql,
+N'@NewWaterMarkValue DATETIME2(6) OUTPUT',
+ @NewWaterMarkValue OUTPUT;
+
+ UPDATE [WH_MetaData].[SalesForce].[IncrementalConfigETL_DirectTable]
+ SET
+ WaterMarkValue = @NewWaterMarkValue
+ WHERE Id = @Id;
+
+ PRINT 'SUCCESS - Id ' + CAST(@Id AS VARCHAR(10));
+
+ END TRY
+ BEGIN CATCH
+ PRINT 'FAILED - Id ' + CAST(@Id AS VARCHAR(10)) + ' | Error: ' + ERROR_MESSAGE();
+ END CATCH
+
+ DELETE FROM [WH_MetaData].[SalesForce].[WaterMarkProcessing] WHERE Id = @Id;
+ END
+
+ DROP TABLE IF EXISTS [WH_MetaData].[SalesForce].[WaterMarkProcessing];
+ PRINT 'Watermark Update Process Completed Successfully.';
+
+END
