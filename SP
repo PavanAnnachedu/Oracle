@@ -1,0 +1,224 @@
+CREATE OR ALTER PROCEDURE dbo.sp_BronzeUpsert
+ (
+ @SourceSchemaName SYSNAME,
+ @SourceTableName SYSNAME,
+ @BronzeSchemaName SYSNAME,
+ @BronzeTableName SYSNAME,
+ @PrimaryKey NVARCHAR(MAX)
+ )
+ AS
+ BEGIN
+ SET NOCOUNT ON;
+ SET XACT_ABORT ON;
+
+ BEGIN TRY
+
+ DECLARE @SourceFullName NVARCHAR(300) = QUOTENAME(@SourceSchemaName) + '.' + QUOTENAME(@SourceTableName);
+ DECLARE @BronzeFullName NVARCHAR(300) = QUOTENAME(@BronzeSchemaName) + '.' + QUOTENAME(@BronzeTableName);
+
+ DECLARE @ColumnListComma NVARCHAR(MAX);
+ DECLARE @ColumnListSrc NVARCHAR(MAX);
+ DECLARE @UpdateSetClause NVARCHAR(MAX);
+ DECLARE @JoinOnClause NVARCHAR(MAX);
+ DECLARE @SQL NVARCHAR(MAX);
+ DECLARE @BronzeExists BIT;
+
+ IF NOT EXISTS (
+ SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+ WHERE TABLE_SCHEMA = @SourceSchemaName AND TABLE_NAME = @SourceTableName
+ )
+ BEGIN
+ RAISERROR('Source table %s.%s does not exist.', 16, 1, @SourceSchemaName, @SourceTableName);
+ RETURN;
+ END
+
+ SET @BronzeExists = CASE WHEN EXISTS (
+ SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+ WHERE TABLE_SCHEMA = @BronzeSchemaName AND TABLE_NAME = @BronzeTableName
+ ) THEN 1 ELSE 0 END;
+
+ IF OBJECT_ID('tempdb..#PKColumns') IS NOT NULL DROP TABLE #PKColumns;
+ CREATE TABLE #PKColumns (ColumnName SYSNAME);
+
+ INSERT INTO #PKColumns (ColumnName)
+ SELECT LTRIM(RTRIM(value))
+ FROM STRING_SPLIT(@PrimaryKey, ',')
+ WHERE LTRIM(RTRIM(value)) <> '';
+
+ IF NOT EXISTS (SELECT 1 FROM #PKColumns)
+ BEGIN
+ RAISERROR('No valid primary key column(s) supplied.', 16, 1);
+ RETURN;
+ END
+
+ IF EXISTS (
+ SELECT 1 FROM #PKColumns pk
+ WHERE NOT EXISTS (
+ SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS c
+ WHERE c.TABLE_SCHEMA = @SourceSchemaName
+ AND c.TABLE_NAME = @SourceTableName
+ AND c.COLUMN_NAME = pk.ColumnName
+ )
+ )
+ BEGIN
+ RAISERROR('One or more PrimaryKey columns do not exist on the source table.', 16, 1);
+ RETURN;
+ END
+
+ IF @BronzeExists = 0
+ BEGIN
+ DECLARE @CreateColList NVARCHAR(MAX);
+
+ SELECT @CreateColList = STRING_AGG(
+ CAST(
+ QUOTENAME(COLUMN_NAME) + ' ' +
+ DATA_TYPE +
+ CASE
+ WHEN DATA_TYPE IN ('varchar','char','varbinary','binary')
+ THEN '(' + CASE WHEN CHARACTER_MAXIMUM_LENGTH = -1 THEN 'MAX' ELSE CAST(CHARACTER_MAXIMUM_LENGTH AS VARCHAR(10)) END + ')'
+ WHEN DATA_TYPE IN ('nvarchar','nchar')
+ THEN '(' + CASE WHEN CHARACTER_MAXIMUM_LENGTH = -1 THEN 'MAX' ELSE CAST(CHARACTER_MAXIMUM_LENGTH AS VARCHAR(10)) END + ')'
+ WHEN DATA_TYPE IN ('decimal','numeric')
+ THEN '(' + CAST(NUMERIC_PRECISION AS VARCHAR(10)) + ',' + CAST(NUMERIC_SCALE AS VARCHAR(10)) + ')'
+ WHEN DATA_TYPE IN ('datetime2','time')
+ THEN '(' + CAST(ISNULL(DATETIME_PRECISION,6) AS VARCHAR(10)) + ')'
+ ELSE ''
+ END
+ AS NVARCHAR(MAX)),
+ ', '
+ ) WITHIN GROUP (ORDER BY ORDINAL_POSITION)
+ FROM INFORMATION_SCHEMA.COLUMNS
+ WHERE TABLE_SCHEMA = @SourceSchemaName
+ AND TABLE_NAME = @SourceTableName;
+
+ SET @SQL = N'
+ IF SCHEMA_ID(''' + @BronzeSchemaName + N''') IS NULL
+ EXEC(''CREATE SCHEMA ' + QUOTENAME(@BronzeSchemaName) + N''');
+ CREATE TABLE ' + @BronzeFullName + N' (' + @CreateColList + N');
+ ';
+
+ EXEC sp_executesql @SQL;
+
+ PRINT CONCAT('Bronze table ', @BronzeFullName, ' did not exist and was created from source schema.');
+ END
+ ELSE
+ BEGIN
+ IF EXISTS (
+ SELECT 1 FROM #PKColumns pk
+ WHERE NOT EXISTS (
+ SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS c
+ WHERE c.TABLE_SCHEMA = @BronzeSchemaName
+ AND c.TABLE_NAME = @BronzeTableName
+ AND c.COLUMN_NAME = pk.ColumnName
+ )
+ )
+ BEGIN
+ RAISERROR('One or more PrimaryKey columns do not exist on the Bronze table.', 16, 1);
+ RETURN;
+ END
+ END
+
+ SELECT @JoinOnClause = STRING_AGG(
+ 'tgt.' + QUOTENAME(ColumnName) + ' = src.' + QUOTENAME(ColumnName),
+ ' AND '
+ )
+ FROM #PKColumns;
+
+ IF OBJECT_ID('tempdb..#Cols') IS NOT NULL DROP TABLE #Cols;
+ CREATE TABLE #Cols (
+ ColumnName SYSNAME,
+ OrdinalPos INT,
+ IsPK BIT
+ );
+
+ INSERT INTO #Cols (ColumnName, OrdinalPos, IsPK)
+ SELECT
+ c.COLUMN_NAME,
+ c.ORDINAL_POSITION,
+ CASE WHEN pk.ColumnName IS NOT NULL THEN 1 ELSE 0 END
+ FROM INFORMATION_SCHEMA.COLUMNS c
+ LEFT JOIN #PKColumns pk
+ ON pk.ColumnName = c.COLUMN_NAME
+ WHERE c.TABLE_SCHEMA = @SourceSchemaName
+ AND c.TABLE_NAME = @SourceTableName
+ AND EXISTS (
+ SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS tc
+ WHERE tc.TABLE_SCHEMA = @BronzeSchemaName
+ AND tc.TABLE_NAME = @BronzeTableName
+ AND tc.COLUMN_NAME = c.COLUMN_NAME
+ );
+
+ IF NOT EXISTS (SELECT 1 FROM #Cols)
+ BEGIN
+ RAISERROR('No matching columns found between source and target tables.', 16, 1);
+ RETURN;
+ END
+
+ SELECT @ColumnListComma = STRING_AGG(QUOTENAME(ColumnName), ', ')
+ WITHIN GROUP (ORDER BY OrdinalPos)
+ FROM #Cols;
+
+ SELECT @ColumnListSrc = STRING_AGG('src.' + QUOTENAME(ColumnName), ', ')
+ WITHIN GROUP (ORDER BY OrdinalPos)
+ FROM #Cols;
+
+ SELECT @UpdateSetClause = STRING_AGG(
+ 'tgt.' + QUOTENAME(ColumnName) + ' = src.' + QUOTENAME(ColumnName), ', ')
+ WITHIN GROUP (ORDER BY OrdinalPos)
+ FROM #Cols
+ WHERE IsPK = 0;
+
+ DECLARE @UpdateRowCount INT = 0;
+ DECLARE @InsertRowCount INT = 0;
+
+ IF @UpdateSetClause IS NOT NULL
+ BEGIN
+ SET @SQL = N'
+ UPDATE tgt
+ SET ' + @UpdateSetClause + N'
+ FROM ' + @BronzeFullName + N' AS tgt
+ INNER JOIN ' + @SourceFullName + N' AS src
+ ON ' + @JoinOnClause + N';
+ ';
+
+ PRINT @SQL;
+
+ EXEC sp_executesql @SQL;
+
+ SET @UpdateRowCount = @@ROWCOUNT;
+ END
+
+ SET @SQL = N'
+ INSERT INTO ' + @BronzeFullName + N' (' + @ColumnListComma + N')
+ SELECT ' + @ColumnListSrc + N'
+ FROM ' + @SourceFullName + N' AS src
+ WHERE NOT EXISTS (
+ SELECT 1 FROM ' + @BronzeFullName + N' AS tgt
+ WHERE ' + @JoinOnClause + N'
+ );
+ ';
+
+ PRINT @SQL;
+
+ EXEC sp_executesql @SQL;
+
+ SET @InsertRowCount = @@ROWCOUNT;
+
+ PRINT CONCAT('Upsert complete: ', @SourceFullName, ' -> ', @BronzeFullName,
+ ' | Rows updated: ', @UpdateRowCount,
+ ' | Rows inserted: ', @InsertRowCount);
+
+ DROP TABLE IF EXISTS #PKColumns;
+ DROP TABLE IF EXISTS #Cols;
+
+ END TRY
+ BEGIN CATCH
+ DROP TABLE IF EXISTS #PKColumns;
+ DROP TABLE IF EXISTS #Cols;
+
+ DECLARE @ErrMsg NVARCHAR(MAX) = ERROR_MESSAGE();
+ DECLARE @ErrLine INT = ERROR_LINE();
+ RAISERROR('sp_BronzeUpsert failed at line %d: %s', 16, 1, @ErrLine, @ErrMsg);
+ END CATCH
+ END
+ GO
