@@ -1,0 +1,101 @@
+CREATE OR ALTER PROCEDURE dbo.sp_BronzeUpsert
+ (
+ @SchemaName NVARCHAR(100),
+ @TableName NVARCHAR(100),
+ @PrimaryKey NVARCHAR(500)
+ )
+ AS
+ BEGIN
+ SET NOCOUNT ON;
+
+ BEGIN TRY
+
+ DECLARE @SourceFullName NVARCHAR(400);
+ DECLARE @TargetFullName NVARCHAR(400);
+ DECLARE @SQL NVARCHAR(MAX);
+ DECLARE @MatchClause NVARCHAR(MAX);
+ DECLARE @PartitionCols NVARCHAR(MAX);
+
+ /* Build table names */
+ SET @SourceFullName = '[WH_Silver].[Stage].' + QUOTENAME(@SchemaName + '_' + @TableName);
+ SET @TargetFullName = '[dbo].' + QUOTENAME(@TableName);
+
+ /* Create table if not exists */
+ IF NOT EXISTS (
+ SELECT 1 FROM INFORMATION_SCHEMA.TABLES
+ WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = @TableName
+ )
+ BEGIN
+ SET @SQL = '
+ SELECT * INTO ' + @TargetFullName + '
+ FROM ' + @SourceFullName + ';
+ ';
+ EXEC sp_executesql @SQL;
+ RETURN;
+ END
+
+ /* Parse PK (no sys.columns / sys.types lookups needed) */
+ IF OBJECT_ID('tempdb..#PKColumns') IS NOT NULL DROP TABLE #PKColumns;
+ CREATE TABLE #PKColumns (ColumnName NVARCHAR(200));
+
+ INSERT INTO #PKColumns
+ SELECT LTRIM(RTRIM(value))
+ FROM STRING_SPLIT(@PrimaryKey, ',')
+ WHERE LTRIM(RTRIM(value)) <> '';
+
+ /* ================================================ */
+ /* Build match clause: tgt.PK = src.PK AND ... */
+ /* COLLATE DATABASE_DEFAULT on every comparison so */
+ /* string PKs can't hit the collation conflict error */
+ /* ================================================ */
+ SELECT @MatchClause =
+ STRING_AGG(
+ 'tgt.' + QUOTENAME(ColumnName) + ' COLLATE DATABASE_DEFAULT = src.' + QUOTENAME(ColumnName) + ' COLLATE DATABASE_DEFAULT',
+ ' AND '
+ )
+ FROM #PKColumns;
+
+ /* Partition / dedup column list (kept for STRING_SPLIT reuse, not strictly needed here) */
+ SELECT @PartitionCols =
+ STRING_AGG(QUOTENAME(ColumnName), ',')
+ FROM #PKColumns;
+
+ /* ================================================ */
+ /* DELETE existing rows that match incoming PKs, */
+ /* then INSERT distinct rows from staging */
+ /* ================================================ */
+ SET @SQL = '
+
+ /* DELETE: remove target rows whose PK exists in source */
+ DELETE tgt
+ FROM ' + @TargetFullName + ' tgt
+ WHERE EXISTS (
+ SELECT 1
+ FROM ' + @SourceFullName + ' src
+ WHERE ' + @MatchClause + '
+ );
+
+ PRINT ''Deleted: '' + CAST(@@ROWCOUNT AS NVARCHAR);
+
+ /* INSERT: distinct rows from staging */
+ INSERT INTO ' + @TargetFullName + '
+ SELECT DISTINCT *
+ FROM ' + @SourceFullName + ';
+
+ PRINT ''Inserted: '' + CAST(@@ROWCOUNT AS NVARCHAR);
+ ';
+
+ EXEC sp_executesql @SQL;
+
+ DROP TABLE IF EXISTS #PKColumns;
+
+ PRINT 'SUCCESS';
+
+ END TRY
+ BEGIN CATCH
+ DROP TABLE IF EXISTS #PKColumns;
+
+ DECLARE @ErrMsg NVARCHAR(MAX) = ERROR_MESSAGE();
+ RAISERROR('FAILED: %s', 16, 1, @ErrMsg);
+ END CATCH
+ END
