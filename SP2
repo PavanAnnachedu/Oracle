@@ -1,0 +1,150 @@
+CREATE OR ALTER PROCEDURE dbo.sp_BronzeUpsert
+ (
+ @SchemaName NVARCHAR(100),
+ @TableName NVARCHAR(100),
+ @PrimaryKey NVARCHAR(500)
+ )
+ AS
+ BEGIN
+ SET NOCOUNT ON;
+
+ BEGIN TRY
+
+ DECLARE @SourceFullName NVARCHAR(400);
+ DECLARE @TargetFullName NVARCHAR(400);
+ DECLARE @SQL NVARCHAR(MAX);
+ DECLARE @MatchClause NVARCHAR(MAX);
+ DECLARE @ColumnDefList NVARCHAR(MAX);
+ DECLARE @ColumnNameList NVARCHAR(MAX);
+ DECLARE @CastColumnList NVARCHAR(MAX);
+
+ /* Build table names */
+ SET @SourceFullName = '[WH_Target].[Stage].'
+ + QUOTENAME(@SchemaName + '_' + @TableName);
+ SET @TargetFullName = '[dbo].' + QUOTENAME(@TableName);
+
+ /* -----------------------------------------------------------
+ Pull source column metadata + map Oracle -> SQL Server types
+ ----------------------------------------------------------- */
+ IF OBJECT_ID('tempdb..#SourceQuery') IS NOT NULL
+ DROP TABLE #SourceQuery;
+
+ CREATE TABLE #SourceQuery (ColumnName VARCHAR(200), Datatype VARCHAR(200));
+
+ INSERT INTO #SourceQuery (ColumnName, Datatype)
+ SELECT COLUMN_NAME, DATA_TYPE
+ FROM WH_MetaData.Config_Oracle.SourceInformationSchema
+ WHERE TABLE_SCHEMA = @SchemaName
+ AND TABLE_NAME = @TableName;
+
+ IF NOT EXISTS (SELECT 1 FROM #SourceQuery)
+ BEGIN
+ RAISERROR('No source metadata found for %s.%s', 16, 1, @SchemaName, @TableName);
+ END
+
+ /* Datatype matching (Oracle -> SQL Server) */
+ SELECT
+ @ColumnDefList = STRING_AGG(CAST(QUOTENAME(ColumnName) + ' ' + SqlDataType AS NVARCHAR(MAX)), ', ') WITHIN GROUP (ORDER BY ColumnName),
+ @ColumnNameList = STRING_AGG(CAST(QUOTENAME(ColumnName) AS NVARCHAR(MAX)), ', ') WITHIN GROUP (ORDER BY ColumnName),
+ @CastColumnList = STRING_AGG(CAST('CAST(src.' + QUOTENAME(ColumnName) + ' AS ' + SqlDataType + ') AS ' + QUOTENAME(ColumnName) AS NVARCHAR(MAX)), ', ') WITHIN GROUP (ORDER BY ColumnName)
+ FROM (
+ SELECT
+ sq.ColumnName,
+ CASE
+ WHEN sq.Datatype LIKE 'TIMESTAMP%' THEN 'DATETIME2(6)'
+ WHEN sq.Datatype LIKE 'INTERVAL%' THEN 'DATETIME2(6)'
+ WHEN sq.Datatype = 'NUMBER' THEN 'DECIMAL(18,2)'
+ WHEN sq.Datatype = 'FLOAT' THEN 'DECIMAL(18,2)'
+ WHEN sq.Datatype = 'DATE' THEN 'DATE'
+ WHEN sq.Datatype IN ('RAW','CHAR','CLOB','ROWID','VARCHAR2') THEN 'VARCHAR(MAX)'
+ ELSE 'VARCHAR(MAX)'
+ END AS SqlDataType
+ FROM #SourceQuery sq
+ ) t;
+
+ /* -----------------------------------------------------------
+ Create target table if not exists
+ ----------------------------------------------------------- */
+ IF NOT EXISTS (
+ SELECT 1
+ FROM INFORMATION_SCHEMA.TABLES
+ WHERE TABLE_SCHEMA = 'dbo'
+ AND TABLE_NAME = @TableName
+ )
+ BEGIN
+ SET @SQL = '
+ CREATE TABLE ' + @TargetFullName + ' (' + @ColumnDefList + ')
+ ';
+ EXEC sp_executesql @SQL;
+
+ SET @SQL = '
+ INSERT INTO ' + @TargetFullName + ' (' + @ColumnNameList + ')
+ SELECT DISTINCT ' + @CastColumnList + '
+ FROM ' + @SourceFullName + ' src
+ ';
+ EXEC sp_executesql @SQL;
+
+ DROP TABLE IF EXISTS #SourceQuery;
+ PRINT 'SUCCESS - Table created and loaded';
+ RETURN;
+ END
+
+ /* -----------------------------------------------------------
+ Parse PK columns
+ ----------------------------------------------------------- */
+ IF OBJECT_ID('tempdb..#PKColumns') IS NOT NULL
+ DROP TABLE #PKColumns;
+
+ CREATE TABLE #PKColumns (ColumnName NVARCHAR(200));
+
+ INSERT INTO #PKColumns
+ SELECT LTRIM(RTRIM(value))
+ FROM STRING_SPLIT(@PrimaryKey, ',')
+ WHERE LTRIM(RTRIM(value)) <> '';
+
+ /* UNIVERSAL MATCH CLAUSE */
+ SELECT @MatchClause =
+ STRING_AGG(
+ 'CAST(tgt.' + QUOTENAME(ColumnName)
+ + ' AS NVARCHAR(4000)) COLLATE DATABASE_DEFAULT = ' +
+ 'CAST(src.' + QUOTENAME(ColumnName)
+ + ' AS NVARCHAR(4000)) COLLATE DATABASE_DEFAULT'
+ , ' AND ')
+ FROM #PKColumns;
+
+ /* -----------------------------------------------------------
+ DELETE + INSERT (upsert), with type-cast source columns
+ ----------------------------------------------------------- */
+ SET @SQL = '
+ DELETE tgt
+ FROM ' + @TargetFullName + ' tgt
+ WHERE EXISTS (
+ SELECT 1
+ FROM ' + @SourceFullName + ' src
+ WHERE ' + @MatchClause + '
+ );
+
+ PRINT ''Deleted: '' + CAST(@@ROWCOUNT AS NVARCHAR);
+
+ INSERT INTO ' + @TargetFullName + ' (' + @ColumnNameList + ')
+ SELECT DISTINCT ' + @CastColumnList + '
+ FROM ' + @SourceFullName + ' src;
+
+ PRINT ''Inserted: '' + CAST(@@ROWCOUNT AS NVARCHAR);
+ ';
+
+ EXEC sp_executesql @SQL;
+
+ DROP TABLE IF EXISTS #PKColumns;
+ DROP TABLE IF EXISTS #SourceQuery;
+
+ PRINT 'SUCCESS';
+
+ END TRY
+ BEGIN CATCH
+ DROP TABLE IF EXISTS #PKColumns;
+ DROP TABLE IF EXISTS #SourceQuery;
+ DECLARE @ErrMsg NVARCHAR(MAX) = ERROR_MESSAGE();
+ RAISERROR('FAILED: %s', 16, 1, @ErrMsg);
+ END CATCH
+ END
