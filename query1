@@ -1,0 +1,10 @@
+INTERVAL DAY(2) TO SECOND(0) - DateTime2(6) 
+ NUMBER - Decimal(18,2) 
+ TIMESTAMP(6) - DateTime2(6) 
+ RAW - varchar(max)
+ DATE - Date
+ CHAR - Varchar(max )
+ CLOB - Varchar(max)
+ ROWID - Varchar(max)
+ VARCHAR2 - Varchar(max)
+ FLOAT - Decimal(18,2)
