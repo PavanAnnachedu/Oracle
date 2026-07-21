@@ -1,0 +1,741 @@
+CREATE SCHEMA Metadata;
+GO
+CREATE TABLE Metadata.Log (
+    LogId INT IDENTITY(1,1) PRIMARY KEY,
+    TableName SYSNAME NOT NULL,
+    StartDate DATETIME2 NOT NULL,
+    EndDate DATETIME2 NULL,
+    Status VARCHAR(20) NOT NULL,
+    ErrorMessage NVARCHAR(MAX) NULL,
+    InsertedRowCount INT NULL
+);
+GO
+CREATE OR ALTER PROCEDURE dbo.usp_LoadPartnerFilteredTables
+    @WarehouseName SYSNAME,
+    @SchemaName    SYSNAME,
+    @PartnerId     INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN
+        DECLARE @StartTime_V_T_F_ACCT_TXN_AAV2 DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_V_T_F_ACCT_TXN_AAV2 NVARCHAR(MAX);
+        DECLARE @RowCount_V_T_F_ACCT_TXN_AAV2 INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.V_T_F_ACCT_TXN_AAV2') IS NULL
+            BEGIN
+                SET @sql_V_T_F_ACCT_TXN_AAV2 = N'CREATE TABLE dbo.V_T_F_ACCT_TXN_AAV2 AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_F_ACCT_TXN_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.V_T_F_ACCT_TXN_AAV2;
+                SET @sql_V_T_F_ACCT_TXN_AAV2 = N'INSERT INTO dbo.V_T_F_ACCT_TXN_AAV2 SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_F_ACCT_TXN_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_V_T_F_ACCT_TXN_AAV2, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_V_T_F_ACCT_TXN_AAV2 = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_F_ACCT_TXN_AAV2', @StartTime_V_T_F_ACCT_TXN_AAV2, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_V_T_F_ACCT_TXN_AAV2);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_F_ACCT_TXN_AAV2', @StartTime_V_T_F_ACCT_TXN_AAV2, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_V_ACCOUNT_SUMMARY_AAV2 DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_V_ACCOUNT_SUMMARY_AAV2 NVARCHAR(MAX);
+        DECLARE @RowCount_V_ACCOUNT_SUMMARY_AAV2 INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.V_ACCOUNT_SUMMARY_AAV2') IS NULL
+            BEGIN
+                SET @sql_V_ACCOUNT_SUMMARY_AAV2 = N'CREATE TABLE dbo.V_ACCOUNT_SUMMARY_AAV2 AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_ACCOUNT_SUMMARY_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.V_ACCOUNT_SUMMARY_AAV2;
+                SET @sql_V_ACCOUNT_SUMMARY_AAV2 = N'INSERT INTO dbo.V_ACCOUNT_SUMMARY_AAV2 SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_ACCOUNT_SUMMARY_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_V_ACCOUNT_SUMMARY_AAV2, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_V_ACCOUNT_SUMMARY_AAV2 = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_ACCOUNT_SUMMARY_AAV2', @StartTime_V_ACCOUNT_SUMMARY_AAV2, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_V_ACCOUNT_SUMMARY_AAV2);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_ACCOUNT_SUMMARY_AAV2', @StartTime_V_ACCOUNT_SUMMARY_AAV2, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_v_t_d_fund DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_v_t_d_fund NVARCHAR(MAX);
+        DECLARE @RowCount_v_t_d_fund INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.v_t_d_fund') IS NULL
+            BEGIN
+                SET @sql_v_t_d_fund = N'CREATE TABLE dbo.v_t_d_fund AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.v_t_d_fund F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.v_t_d_fund;
+                SET @sql_v_t_d_fund = N'INSERT INTO dbo.v_t_d_fund SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.v_t_d_fund F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_v_t_d_fund, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_v_t_d_fund = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('v_t_d_fund', @StartTime_v_t_d_fund, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_v_t_d_fund);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('v_t_d_fund', @StartTime_v_t_d_fund, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_plan DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_plan NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_plan INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_plan') IS NULL
+            BEGIN
+                SET @sql_t_d_plan = N'CREATE TABLE dbo.t_d_plan AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_plan F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_plan;
+                SET @sql_t_d_plan = N'INSERT INTO dbo.t_d_plan SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_plan F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_t_d_plan, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_plan = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_plan', @StartTime_t_d_plan, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_plan);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_plan', @StartTime_t_d_plan, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_v_t_d_txn_type DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_v_t_d_txn_type NVARCHAR(MAX);
+        DECLARE @RowCount_v_t_d_txn_type INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.v_t_d_txn_type') IS NULL
+            BEGIN
+                SET @sql_v_t_d_txn_type = N'CREATE TABLE dbo.v_t_d_txn_type AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.v_t_d_txn_type F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.TRAUNCH_ID = F.TRAUNCH_ID WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.v_t_d_txn_type;
+                SET @sql_v_t_d_txn_type = N'INSERT INTO dbo.v_t_d_txn_type SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.v_t_d_txn_type F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.TRAUNCH_ID = F.TRAUNCH_ID WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_v_t_d_txn_type, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_v_t_d_txn_type = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('v_t_d_txn_type', @StartTime_v_t_d_txn_type, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_v_t_d_txn_type);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('v_t_d_txn_type', @StartTime_v_t_d_txn_type, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_dealer DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_dealer NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_dealer INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_dealer') IS NULL
+            BEGIN
+                SET @sql_t_d_dealer = N'CREATE TABLE dbo.t_d_dealer AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_dealer;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_dealer;
+                SET @sql_t_d_dealer = N'INSERT INTO dbo.t_d_dealer SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_dealer;';
+            END
+            EXEC sp_executesql @sql_t_d_dealer, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_dealer = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_dealer', @StartTime_t_d_dealer, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_dealer);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_dealer', @StartTime_t_d_dealer, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_branch DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_branch NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_branch INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_branch') IS NULL
+            BEGIN
+                SET @sql_t_d_branch = N'CREATE TABLE dbo.t_d_branch AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_branch;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_branch;
+                SET @sql_t_d_branch = N'INSERT INTO dbo.t_d_branch SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_branch;';
+            END
+            EXEC sp_executesql @sql_t_d_branch, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_branch = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_branch', @StartTime_t_d_branch, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_branch);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_branch', @StartTime_t_d_branch, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_rep DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_rep NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_rep INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_rep') IS NULL
+            BEGIN
+                SET @sql_t_d_rep = N'CREATE TABLE dbo.t_d_rep AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_rep;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_rep;
+                SET @sql_t_d_rep = N'INSERT INTO dbo.t_d_rep SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_rep;';
+            END
+            EXEC sp_executesql @sql_t_d_rep, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_rep = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_rep', @StartTime_t_d_rep, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_rep);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_rep', @StartTime_t_d_rep, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_csr DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_csr NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_csr INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_csr') IS NULL
+            BEGIN
+                SET @sql_t_d_csr = N'CREATE TABLE dbo.t_d_csr AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_csr;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_csr;
+                SET @sql_t_d_csr = N'INSERT INTO dbo.t_d_csr SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_csr;';
+            END
+            EXEC sp_executesql @sql_t_d_csr, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_csr = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_csr', @StartTime_t_d_csr, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_csr);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_csr', @StartTime_t_d_csr, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_V_T_F_ACCOUNT_ENROLLMENT_AAV2 DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_V_T_F_ACCOUNT_ENROLLMENT_AAV2 NVARCHAR(MAX);
+        DECLARE @RowCount_V_T_F_ACCOUNT_ENROLLMENT_AAV2 INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.V_T_F_ACCOUNT_ENROLLMENT_AAV2') IS NULL
+            BEGIN
+                SET @sql_V_T_F_ACCOUNT_ENROLLMENT_AAV2 = N'CREATE TABLE dbo.V_T_F_ACCOUNT_ENROLLMENT_AAV2 AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_F_ACCOUNT_ENROLLMENT_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.V_T_F_ACCOUNT_ENROLLMENT_AAV2;
+                SET @sql_V_T_F_ACCOUNT_ENROLLMENT_AAV2 = N'INSERT INTO dbo.V_T_F_ACCOUNT_ENROLLMENT_AAV2 SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_F_ACCOUNT_ENROLLMENT_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_V_T_F_ACCOUNT_ENROLLMENT_AAV2, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_V_T_F_ACCOUNT_ENROLLMENT_AAV2 = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_F_ACCOUNT_ENROLLMENT_AAV2', @StartTime_V_T_F_ACCOUNT_ENROLLMENT_AAV2, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_V_T_F_ACCOUNT_ENROLLMENT_AAV2);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_F_ACCOUNT_ENROLLMENT_AAV2', @StartTime_V_T_F_ACCOUNT_ENROLLMENT_AAV2, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_V_T_F_ACCOUNT_CLOSURE_AAV2 DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_V_T_F_ACCOUNT_CLOSURE_AAV2 NVARCHAR(MAX);
+        DECLARE @RowCount_V_T_F_ACCOUNT_CLOSURE_AAV2 INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.V_T_F_ACCOUNT_CLOSURE_AAV2') IS NULL
+            BEGIN
+                SET @sql_V_T_F_ACCOUNT_CLOSURE_AAV2 = N'CREATE TABLE dbo.V_T_F_ACCOUNT_CLOSURE_AAV2 AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_F_ACCOUNT_CLOSURE_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.V_T_F_ACCOUNT_CLOSURE_AAV2;
+                SET @sql_V_T_F_ACCOUNT_CLOSURE_AAV2 = N'INSERT INTO dbo.V_T_F_ACCOUNT_CLOSURE_AAV2 SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_F_ACCOUNT_CLOSURE_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_V_T_F_ACCOUNT_CLOSURE_AAV2, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_V_T_F_ACCOUNT_CLOSURE_AAV2 = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_F_ACCOUNT_CLOSURE_AAV2', @StartTime_V_T_F_ACCOUNT_CLOSURE_AAV2, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_V_T_F_ACCOUNT_CLOSURE_AAV2);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_F_ACCOUNT_CLOSURE_AAV2', @StartTime_V_T_F_ACCOUNT_CLOSURE_AAV2, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_T_DW_ACCESS_CONTROL DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_T_DW_ACCESS_CONTROL NVARCHAR(MAX);
+        DECLARE @RowCount_T_DW_ACCESS_CONTROL INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.T_DW_ACCESS_CONTROL') IS NULL
+            BEGIN
+                SET @sql_T_DW_ACCESS_CONTROL = N'CREATE TABLE dbo.T_DW_ACCESS_CONTROL AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.T_DW_ACCESS_CONTROL;
+                SET @sql_T_DW_ACCESS_CONTROL = N'INSERT INTO dbo.T_DW_ACCESS_CONTROL SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL;';
+            END
+            EXEC sp_executesql @sql_T_DW_ACCESS_CONTROL, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_T_DW_ACCESS_CONTROL = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_DW_ACCESS_CONTROL', @StartTime_T_DW_ACCESS_CONTROL, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_T_DW_ACCESS_CONTROL);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_DW_ACCESS_CONTROL', @StartTime_T_DW_ACCESS_CONTROL, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_T_DW_ACCESS_PARTY DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_T_DW_ACCESS_PARTY NVARCHAR(MAX);
+        DECLARE @RowCount_T_DW_ACCESS_PARTY INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.T_DW_ACCESS_PARTY') IS NULL
+            BEGIN
+                SET @sql_T_DW_ACCESS_PARTY = N'CREATE TABLE dbo.T_DW_ACCESS_PARTY AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_PARTY;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.T_DW_ACCESS_PARTY;
+                SET @sql_T_DW_ACCESS_PARTY = N'INSERT INTO dbo.T_DW_ACCESS_PARTY SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_PARTY;';
+            END
+            EXEC sp_executesql @sql_T_DW_ACCESS_PARTY, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_T_DW_ACCESS_PARTY = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_DW_ACCESS_PARTY', @StartTime_T_DW_ACCESS_PARTY, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_T_DW_ACCESS_PARTY);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_DW_ACCESS_PARTY', @StartTime_T_DW_ACCESS_PARTY, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_v_t_d_time DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_v_t_d_time NVARCHAR(MAX);
+        DECLARE @RowCount_v_t_d_time INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.v_t_d_time') IS NULL
+            BEGIN
+                SET @sql_v_t_d_time = N'CREATE TABLE dbo.v_t_d_time AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.v_t_d_time;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.v_t_d_time;
+                SET @sql_v_t_d_time = N'INSERT INTO dbo.v_t_d_time SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.v_t_d_time;';
+            END
+            EXEC sp_executesql @sql_v_t_d_time, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_v_t_d_time = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('v_t_d_time', @StartTime_v_t_d_time, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_v_t_d_time);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('v_t_d_time', @StartTime_v_t_d_time, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_disbursement DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_disbursement NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_disbursement INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_disbursement') IS NULL
+            BEGIN
+                SET @sql_t_d_disbursement = N'CREATE TABLE dbo.t_d_disbursement AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_disbursement;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_disbursement;
+                SET @sql_t_d_disbursement = N'INSERT INTO dbo.t_d_disbursement SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_disbursement;';
+            END
+            EXEC sp_executesql @sql_t_d_disbursement, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_disbursement = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_disbursement', @StartTime_t_d_disbursement, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_disbursement);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_disbursement', @StartTime_t_d_disbursement, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_V_T_F_ACCOUNT_SNAPSHOT_AAV2 DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_V_T_F_ACCOUNT_SNAPSHOT_AAV2 NVARCHAR(MAX);
+        DECLARE @RowCount_V_T_F_ACCOUNT_SNAPSHOT_AAV2 INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.V_T_F_ACCOUNT_SNAPSHOT_AAV2') IS NULL
+            BEGIN
+                SET @sql_V_T_F_ACCOUNT_SNAPSHOT_AAV2 = N'CREATE TABLE dbo.V_T_F_ACCOUNT_SNAPSHOT_AAV2 AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_F_ACCOUNT_SNAPSHOT_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.V_T_F_ACCOUNT_SNAPSHOT_AAV2;
+                SET @sql_V_T_F_ACCOUNT_SNAPSHOT_AAV2 = N'INSERT INTO dbo.V_T_F_ACCOUNT_SNAPSHOT_AAV2 SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_F_ACCOUNT_SNAPSHOT_AAV2 F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_V_T_F_ACCOUNT_SNAPSHOT_AAV2, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_V_T_F_ACCOUNT_SNAPSHOT_AAV2 = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_F_ACCOUNT_SNAPSHOT_AAV2', @StartTime_V_T_F_ACCOUNT_SNAPSHOT_AAV2, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_V_T_F_ACCOUNT_SNAPSHOT_AAV2);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_F_ACCOUNT_SNAPSHOT_AAV2', @StartTime_V_T_F_ACCOUNT_SNAPSHOT_AAV2, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_dormancy DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_dormancy NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_dormancy INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_dormancy') IS NULL
+            BEGIN
+                SET @sql_t_d_dormancy = N'CREATE TABLE dbo.t_d_dormancy AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_dormancy;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_dormancy;
+                SET @sql_t_d_dormancy = N'INSERT INTO dbo.t_d_dormancy SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_dormancy;';
+            END
+            EXEC sp_executesql @sql_t_d_dormancy, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_dormancy = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_dormancy', @StartTime_t_d_dormancy, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_dormancy);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_dormancy', @StartTime_t_d_dormancy, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_funded DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_funded NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_funded INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_funded') IS NULL
+            BEGIN
+                SET @sql_t_d_funded = N'CREATE TABLE dbo.t_d_funded AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_funded;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_funded;
+                SET @sql_t_d_funded = N'INSERT INTO dbo.t_d_funded SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_funded;';
+            END
+            EXEC sp_executesql @sql_t_d_funded, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_funded = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_funded', @StartTime_t_d_funded, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_funded);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_funded', @StartTime_t_d_funded, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_age DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_age NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_age INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_age') IS NULL
+            BEGIN
+                SET @sql_t_d_age = N'CREATE TABLE dbo.t_d_age AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_age;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_age;
+                SET @sql_t_d_age = N'INSERT INTO dbo.t_d_age SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_age;';
+            END
+            EXEC sp_executesql @sql_t_d_age, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_age = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_age', @StartTime_t_d_age, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_age);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_age', @StartTime_t_d_age, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_T_F_ORGANIZATION_MEMBER_AFFILIATION DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_T_F_ORGANIZATION_MEMBER_AFFILIATION NVARCHAR(MAX);
+        DECLARE @RowCount_T_F_ORGANIZATION_MEMBER_AFFILIATION INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.T_F_ORGANIZATION_MEMBER_AFFILIATION') IS NULL
+            BEGIN
+                SET @sql_T_F_ORGANIZATION_MEMBER_AFFILIATION = N'CREATE TABLE dbo.T_F_ORGANIZATION_MEMBER_AFFILIATION AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_F_ORGANIZATION_MEMBER_AFFILIATION F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION O ON F.ORGANIZATION_KEY = O.ORGANIZATION_KEY JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = O.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.T_F_ORGANIZATION_MEMBER_AFFILIATION;
+                SET @sql_T_F_ORGANIZATION_MEMBER_AFFILIATION = N'INSERT INTO dbo.T_F_ORGANIZATION_MEMBER_AFFILIATION SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_F_ORGANIZATION_MEMBER_AFFILIATION F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION O ON F.ORGANIZATION_KEY = O.ORGANIZATION_KEY JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = O.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_T_F_ORGANIZATION_MEMBER_AFFILIATION, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_T_F_ORGANIZATION_MEMBER_AFFILIATION = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_F_ORGANIZATION_MEMBER_AFFILIATION', @StartTime_T_F_ORGANIZATION_MEMBER_AFFILIATION, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_T_F_ORGANIZATION_MEMBER_AFFILIATION);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_F_ORGANIZATION_MEMBER_AFFILIATION', @StartTime_T_F_ORGANIZATION_MEMBER_AFFILIATION, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_T_D_ORGANIZATION_STATUS DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_T_D_ORGANIZATION_STATUS NVARCHAR(MAX);
+        DECLARE @RowCount_T_D_ORGANIZATION_STATUS INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.T_D_ORGANIZATION_STATUS') IS NULL
+            BEGIN
+                SET @sql_T_D_ORGANIZATION_STATUS = N'CREATE TABLE dbo.T_D_ORGANIZATION_STATUS AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION_STATUS;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.T_D_ORGANIZATION_STATUS;
+                SET @sql_T_D_ORGANIZATION_STATUS = N'INSERT INTO dbo.T_D_ORGANIZATION_STATUS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION_STATUS;';
+            END
+            EXEC sp_executesql @sql_T_D_ORGANIZATION_STATUS, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_T_D_ORGANIZATION_STATUS = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_D_ORGANIZATION_STATUS', @StartTime_T_D_ORGANIZATION_STATUS, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_T_D_ORGANIZATION_STATUS);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_D_ORGANIZATION_STATUS', @StartTime_T_D_ORGANIZATION_STATUS, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_T_D_ORGANIZATION_TYPE DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_T_D_ORGANIZATION_TYPE NVARCHAR(MAX);
+        DECLARE @RowCount_T_D_ORGANIZATION_TYPE INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.T_D_ORGANIZATION_TYPE') IS NULL
+            BEGIN
+                SET @sql_T_D_ORGANIZATION_TYPE = N'CREATE TABLE dbo.T_D_ORGANIZATION_TYPE AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION_TYPE;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.T_D_ORGANIZATION_TYPE;
+                SET @sql_T_D_ORGANIZATION_TYPE = N'INSERT INTO dbo.T_D_ORGANIZATION_TYPE SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION_TYPE;';
+            END
+            EXEC sp_executesql @sql_T_D_ORGANIZATION_TYPE, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_T_D_ORGANIZATION_TYPE = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_D_ORGANIZATION_TYPE', @StartTime_T_D_ORGANIZATION_TYPE, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_T_D_ORGANIZATION_TYPE);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_D_ORGANIZATION_TYPE', @StartTime_T_D_ORGANIZATION_TYPE, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_T_F_ORGANIZATION_ACCOUNT DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_T_F_ORGANIZATION_ACCOUNT NVARCHAR(MAX);
+        DECLARE @RowCount_T_F_ORGANIZATION_ACCOUNT INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.T_F_ORGANIZATION_ACCOUNT') IS NULL
+            BEGIN
+                SET @sql_T_F_ORGANIZATION_ACCOUNT = N'CREATE TABLE dbo.T_F_ORGANIZATION_ACCOUNT AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_F_ORGANIZATION_ACCOUNT F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION O ON F.ORGANIZATION_KEY = O.ORGANIZATION_KEY JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = O.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.T_F_ORGANIZATION_ACCOUNT;
+                SET @sql_T_F_ORGANIZATION_ACCOUNT = N'INSERT INTO dbo.T_F_ORGANIZATION_ACCOUNT SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_F_ORGANIZATION_ACCOUNT F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION O ON F.ORGANIZATION_KEY = O.ORGANIZATION_KEY JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = O.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_T_F_ORGANIZATION_ACCOUNT, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_T_F_ORGANIZATION_ACCOUNT = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_F_ORGANIZATION_ACCOUNT', @StartTime_T_F_ORGANIZATION_ACCOUNT, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_T_F_ORGANIZATION_ACCOUNT);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_F_ORGANIZATION_ACCOUNT', @StartTime_T_F_ORGANIZATION_ACCOUNT, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_V_T_D_ORGANIZATION_BI DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_V_T_D_ORGANIZATION_BI NVARCHAR(MAX);
+        DECLARE @RowCount_V_T_D_ORGANIZATION_BI INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.V_T_D_ORGANIZATION_BI') IS NULL
+            BEGIN
+                SET @sql_V_T_D_ORGANIZATION_BI = N'CREATE TABLE dbo.V_T_D_ORGANIZATION_BI AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_D_ORGANIZATION_BI F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.V_T_D_ORGANIZATION_BI;
+                SET @sql_V_T_D_ORGANIZATION_BI = N'INSERT INTO dbo.V_T_D_ORGANIZATION_BI SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_D_ORGANIZATION_BI F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_V_T_D_ORGANIZATION_BI, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_V_T_D_ORGANIZATION_BI = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_D_ORGANIZATION_BI', @StartTime_V_T_D_ORGANIZATION_BI, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_V_T_D_ORGANIZATION_BI);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_D_ORGANIZATION_BI', @StartTime_V_T_D_ORGANIZATION_BI, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_member_status DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_member_status NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_member_status INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_member_status') IS NULL
+            BEGIN
+                SET @sql_t_d_member_status = N'CREATE TABLE dbo.t_d_member_status AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_member_status;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_member_status;
+                SET @sql_t_d_member_status = N'INSERT INTO dbo.t_d_member_status SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_member_status;';
+            END
+            EXEC sp_executesql @sql_t_d_member_status, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_member_status = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_member_status', @StartTime_t_d_member_status, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_member_status);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_member_status', @StartTime_t_d_member_status, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_V_T_D_PROFILE_NP DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_V_T_D_PROFILE_NP NVARCHAR(MAX);
+        DECLARE @RowCount_V_T_D_PROFILE_NP INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.V_T_D_PROFILE_NP') IS NULL
+            BEGIN
+                SET @sql_V_T_D_PROFILE_NP = N'CREATE TABLE dbo.V_T_D_PROFILE_NP AS SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_D_PROFILE_NP F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION O ON F.ORGANIZATION_KEY = O.ORGANIZATION_KEY JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = O.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.V_T_D_PROFILE_NP;
+                SET @sql_V_T_D_PROFILE_NP = N'INSERT INTO dbo.V_T_D_PROFILE_NP SELECT F.* ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.V_T_D_PROFILE_NP F JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_ORGANIZATION O ON F.ORGANIZATION_KEY = O.ORGANIZATION_KEY JOIN ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = O.PLAN_KEY WHERE C.ACCESS_PARTY_ID = @PartnerId AND C.ACTIVE_RECORD_IND = ''Y'';';
+            END
+            EXEC sp_executesql @sql_V_T_D_PROFILE_NP, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_V_T_D_PROFILE_NP = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_D_PROFILE_NP', @StartTime_V_T_D_PROFILE_NP, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_V_T_D_PROFILE_NP);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('V_T_D_PROFILE_NP', @StartTime_V_T_D_PROFILE_NP, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_member_perm_type DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_member_perm_type NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_member_perm_type INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_member_perm_type') IS NULL
+            BEGIN
+                SET @sql_t_d_member_perm_type = N'CREATE TABLE dbo.t_d_member_perm_type AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_member_perm_type;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_member_perm_type;
+                SET @sql_t_d_member_perm_type = N'INSERT INTO dbo.t_d_member_perm_type SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_member_perm_type;';
+            END
+            EXEC sp_executesql @sql_t_d_member_perm_type, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_member_perm_type = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_member_perm_type', @StartTime_t_d_member_perm_type, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_member_perm_type);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_member_perm_type', @StartTime_t_d_member_perm_type, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_t_d_member_role_type DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_t_d_member_role_type NVARCHAR(MAX);
+        DECLARE @RowCount_t_d_member_role_type INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.t_d_member_role_type') IS NULL
+            BEGIN
+                SET @sql_t_d_member_role_type = N'CREATE TABLE dbo.t_d_member_role_type AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_member_role_type;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.t_d_member_role_type;
+                SET @sql_t_d_member_role_type = N'INSERT INTO dbo.t_d_member_role_type SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.t_d_member_role_type;';
+            END
+            EXEC sp_executesql @sql_t_d_member_role_type, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_t_d_member_role_type = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_member_role_type', @StartTime_t_d_member_role_type, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_t_d_member_role_type);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('t_d_member_role_type', @StartTime_t_d_member_role_type, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_T_F_POOL_ACCOUNT_ASSETS DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_T_F_POOL_ACCOUNT_ASSETS NVARCHAR(MAX);
+        DECLARE @RowCount_T_F_POOL_ACCOUNT_ASSETS INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.T_F_POOL_ACCOUNT_ASSETS') IS NULL
+            BEGIN
+                SET @sql_T_F_POOL_ACCOUNT_ASSETS = N'CREATE TABLE dbo.T_F_POOL_ACCOUNT_ASSETS AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_F_POOL_ACCOUNT_ASSETS;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.T_F_POOL_ACCOUNT_ASSETS;
+                SET @sql_T_F_POOL_ACCOUNT_ASSETS = N'INSERT INTO dbo.T_F_POOL_ACCOUNT_ASSETS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_F_POOL_ACCOUNT_ASSETS;';
+            END
+            EXEC sp_executesql @sql_T_F_POOL_ACCOUNT_ASSETS, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_T_F_POOL_ACCOUNT_ASSETS = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_F_POOL_ACCOUNT_ASSETS', @StartTime_T_F_POOL_ACCOUNT_ASSETS, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_T_F_POOL_ACCOUNT_ASSETS);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_F_POOL_ACCOUNT_ASSETS', @StartTime_T_F_POOL_ACCOUNT_ASSETS, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+    BEGIN
+        DECLARE @StartTime_T_D_OMNIBUS_SOURCE DATETIME2 = SYSUTCDATETIME();
+        DECLARE @sql_T_D_OMNIBUS_SOURCE NVARCHAR(MAX);
+        DECLARE @RowCount_T_D_OMNIBUS_SOURCE INT;
+        BEGIN TRY
+            IF OBJECT_ID('dbo.T_D_OMNIBUS_SOURCE') IS NULL
+            BEGIN
+                SET @sql_T_D_OMNIBUS_SOURCE = N'CREATE TABLE dbo.T_D_OMNIBUS_SOURCE AS SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_OMNIBUS_SOURCE;';
+            END
+            ELSE
+            BEGIN
+                TRUNCATE TABLE dbo.T_D_OMNIBUS_SOURCE;
+                SET @sql_T_D_OMNIBUS_SOURCE = N'INSERT INTO dbo.T_D_OMNIBUS_SOURCE SELECT * ' + N'FROM ' + QUOTENAME(@WarehouseName) + N'.' + QUOTENAME(@SchemaName) + N'.T_D_OMNIBUS_SOURCE;';
+            END
+            EXEC sp_executesql @sql_T_D_OMNIBUS_SOURCE, N'@PartnerId INT', @PartnerId = @PartnerId;
+            SET @RowCount_T_D_OMNIBUS_SOURCE = @@ROWCOUNT;
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_D_OMNIBUS_SOURCE', @StartTime_T_D_OMNIBUS_SOURCE, SYSUTCDATETIME(), 'SUCCESS', NULL, @RowCount_T_D_OMNIBUS_SOURCE);
+        END TRY
+        BEGIN CATCH
+            INSERT INTO Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+            VALUES ('T_D_OMNIBUS_SOURCE', @StartTime_T_D_OMNIBUS_SOURCE, SYSUTCDATETIME(), 'FAILED', ERROR_MESSAGE(), 0);
+        END CATCH
+    END
+END
+GO
