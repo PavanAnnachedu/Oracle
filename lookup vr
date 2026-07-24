@@ -1,0 +1,63 @@
+WITH CTE AS
+(
+    SELECT TOP (100)
+        [Id],
+        [SchemaName],
+        [TableName],
+        [PartnerId],
+        [SourceWarehouse],
+        [SourceSchemaName],
+        [SourceWarehouseConnectionString],
+        [PartnerWarehouseName],
+        [PartnerStagingSchema],
+        [PartnerConnectionString],
+        [SourceQuery],
+        [WaterMarkField],
+        [WaterMarkValue],
+        [IsActive],
+        [FilterType],
+
+        CASE
+            WHEN FilterType = 1 THEN
+                REPLACE(SourceQuery, '{PartnerId}', CAST(PartnerId AS VARCHAR(50)))
+
+            WHEN FilterType = 2 THEN
+                CONCAT(
+                    SourceQuery,
+                    ' WHERE ',
+                    WaterMarkField,
+                    ' >= ''',
+                    WaterMarkValue,
+                    ''''
+                )
+
+            ELSE SourceQuery
+        END AS ModifiedSourceQuery
+
+    FROM [WH_VIRGINIA].[Metadata].[PARTNER_CONFIG]
+)
+
+SELECT
+    TableName,
+    CASE
+        WHEN FilterType = 1
+             AND WaterMarkField <> 'DW_UPD_DTTM'
+        THEN
+            CONCAT(
+                ModifiedSourceQuery,
+                CASE
+                    WHEN UPPER(ModifiedSourceQuery) LIKE '% WHERE %'
+                        THEN ' AND '
+                    ELSE ' WHERE '
+                END,
+                WaterMarkField,
+                ' >= ''',
+                WaterMarkValue,
+                ''''
+            )
+
+        ELSE
+            ModifiedSourceQuery
+    END AS FinalSourceQuery
+
+FROM CTE;
