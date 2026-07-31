@@ -14,8 +14,11 @@ DECLARE @TgtObjectId       NVARCHAR(500);
 DECLARE @SQL               NVARCHAR(MAX);
 DECLARE @TableExists       BIT;
 
--- Table variable to collect execution logs across all tables
-DECLARE @Logs TABLE (
+-- Temporary table to collect execution logs across all tables
+IF OBJECT_ID('tempdb..#Logs', 'U') IS NOT NULL
+    DROP TABLE #Logs;
+
+CREATE TABLE #Logs (
     TableName       VARCHAR(200),
     StartTime       DATETIME2(6),
     EndTime         DATETIME2(6),
@@ -110,15 +113,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -200,15 +203,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -288,15 +291,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -386,15 +389,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -487,15 +490,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -633,15 +636,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -779,15 +782,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -925,15 +928,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1083,15 +1086,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1185,15 +1188,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1287,15 +1290,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1393,15 +1396,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1499,15 +1502,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1605,15 +1608,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1751,15 +1754,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1857,15 +1860,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -1977,15 +1980,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -2143,15 +2146,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -2309,15 +2312,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -2455,15 +2458,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -2622,15 +2625,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -2739,15 +2742,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -2848,15 +2851,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -3031,15 +3034,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -3214,15 +3217,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -3329,15 +3332,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -3534,15 +3537,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -3708,15 +3711,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -3816,15 +3819,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -3930,15 +3933,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -4047,15 +4050,15 @@ BEGIN TRY
         SET @InsertedRows = @@ROWCOUNT;
     END
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH
@@ -4297,15 +4300,15 @@ BEGIN TRY
 
     END;
 
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'SUCCESS', NULL);
 
 END TRY
 BEGIN CATCH
-    INSERT INTO @Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
+    INSERT INTO #Logs VALUES (@TgtObjectId, @StartTime, SYSDATETIME(), @InsertedRows + @UpdatedRows, 'FAILED', ERROR_MESSAGE());
 
     INSERT INTO Metadata.Upsert_LOG (TableName, StartTime, EndTime, DurationSeconds, RowsAffected, Status, ErrorMessage)
     SELECT TableName, StartTime, EndTime, DATEDIFF(SECOND, StartTime, EndTime), RowsAffected, Status, ErrorMessage
-    FROM @Logs;
+    FROM #Logs;
 
     THROW;
 END CATCH;
@@ -4322,4 +4325,6 @@ SELECT
     RowsAffected, 
     Status, 
     ErrorMessage
-FROM @Logs;
+FROM #Logs;
+
+DROP TABLE #Logs;
