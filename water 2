@@ -1,0 +1,6 @@
+UPDATE b
+SET b.WatermarkValue = a.PartnerWatermarkValue
+FROM Partner.ProcessConfig a
+JOIN Partner.Config b
+    ON a.TableId = b.Id
+   AND a.PartnerName = b.PartnerName;
