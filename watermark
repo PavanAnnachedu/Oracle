@@ -1,0 +1,9 @@
+SELECT
+    b.Id,
+    b.PartnerName,
+    b.WatermarkValue AS OldWatermarkValue,
+    a.PartnerWatermarkValue AS NewWatermarkValue
+FROM Partner.ProcessConfig a
+JOIN Partner.Config b
+    ON a.TableId = b.Id
+   AND a.PartnerName = b.PartnerName;
