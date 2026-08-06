@@ -1,0 +1,158 @@
+-------------------------------------------------------------
+-- TXN_PLAN_MONTI -> UpdateSummary
+-------------------------------------------------------------
+
+SET @StartTime = SYSDATETIME();
+SET @InsertedRows = 0;
+SET @UpdatedRows = 0;
+
+SET @TgtObjectId = @TableSchema + '.' + @TableName;
+
+BEGIN TRY
+
+    SET @SQL = N'
+
+    WITH EOM_TM_KEY AS
+    (
+        SELECT
+            TIME_KEY,
+            DATE_OF_DAY,
+            END_OF_MONTH,
+            MONTH_NAME,
+            YEAR_ID
+        FROM [' + @WarehouseName + '].[' + @TableSchema + '].[V_T_D_TIME]
+        WHERE DATE_OF_DAY = END_OF_MONTH
+    ),
+    SRC AS
+    (
+        -- Your aggregation query
+    )
+
+    MERGE [' + @WarehouseName + '].[' + @TableSchema + '].[' + @TableName + '] AS tgt
+    USING SRC AS src
+        ON tgt.TIME_KEY = src.TIME_KEY
+       AND tgt.PLAN_KEY = src.PLAN_KEY
+       AND tgt.FUND_KEY = src.FUND_KEY
+       AND tgt.TXN_TYPE_KEY = src.TXN_TYPE_KEY
+       AND tgt.BENE_RUN_AGE = src.BENE_RUN_AGE
+       AND tgt.TXN_CHANNEL = src.TXN_CHANNEL
+       AND tgt.DISBURSEMENT_KEY = src.DISBURSEMENT_KEY
+
+    WHEN MATCHED THEN
+        UPDATE SET
+            tgt.END_OF_MONTH = src.END_OF_MONTH,
+            tgt.MONTH_NAME = src.MONTH_NAME,
+            tgt.YEAR_ID = src.YEAR_ID,
+            tgt.AMOUNT = src.AMOUNT,
+            tgt.SHARES = src.SHARES,
+            tgt.TXN_CNT = src.TXN_CNT
+
+    WHEN NOT MATCHED THEN
+        INSERT
+        (
+            TIME_KEY,
+            END_OF_MONTH,
+            MONTH_NAME,
+            YEAR_ID,
+            PLAN_KEY,
+            FUND_KEY,
+            TXN_TYPE_KEY,
+            BENE_RUN_AGE,
+            TXN_CHANNEL,
+            DISBURSEMENT_KEY,
+            AMOUNT,
+            SHARES,
+            TXN_CNT
+        )
+        VALUES
+        (
+            src.TIME_KEY,
+            src.END_OF_MONTH,
+            src.MONTH_NAME,
+            src.YEAR_ID,
+            src.PLAN_KEY,
+            src.FUND_KEY,
+            src.TXN_TYPE_KEY,
+            src.BENE_RUN_AGE,
+            src.TXN_CHANNEL,
+            src.DISBURSEMENT_KEY,
+            src.AMOUNT,
+            src.SHARES,
+            src.TXN_CNT
+        );
+    ';
+
+    EXEC sp_executesql @SQL;
+
+    /* Capture affected rows */
+    SET @InsertedRows = @@ROWCOUNT;
+    SET @UpdatedRows = 0;
+
+    INSERT INTO #Logs
+    VALUES
+    (
+        @TgtObjectId,
+        @StartTime,
+        SYSDATETIME(),
+        @InsertedRows + @UpdatedRows,
+        'SUCCESS',
+        NULL
+    );
+
+END TRY
+BEGIN CATCH
+
+    INSERT INTO #Logs
+    VALUES
+    (
+        @TgtObjectId,
+        @StartTime,
+        SYSDATETIME(),
+        @InsertedRows + @UpdatedRows,
+        'FAILED',
+        ERROR_MESSAGE()
+    );
+
+    INSERT INTO Metadata.Upsert_LOG
+    (
+        TableName,
+        StartTime,
+        EndTime,
+        DurationSeconds,
+        RowsAffected,
+        Status,
+        ErrorMessage
+    )
+    SELECT
+        TableName,
+        StartTime,
+        EndTime,
+        DATEDIFF(SECOND, StartTime, EndTime),
+        RowsAffected,
+        Status,
+        ErrorMessage
+    FROM #Logs;
+
+    THROW;
+
+END CATCH;
+
+INSERT INTO Metadata.Upsert_LOG
+(
+    TableName,
+    StartTime,
+    EndTime,
+    DurationSeconds,
+    RowsAffected,
+    Status,
+    ErrorMessage
+)
+SELECT
+    TableName,
+    StartTime,
+    EndTime,
+    DATEDIFF(SECOND, StartTime, EndTime),
+    RowsAffected,
+    Status,
+    ErrorMessage
+FROM #Logs;
