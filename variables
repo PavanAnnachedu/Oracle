@@ -1,0 +1,5 @@
+@coalesce(if(and(not(empty(activity('Tables - Bronze Lakehouse').output.errors)),not(empty(activity('Tables - Bronze Lakehouse').output.errors[0].Message))),activity('Tables - Bronze Lakehouse').output.errors[0].Message,'NotExecuted'),'unknown error due to connection establishment')
+
+
+
+@if(contains(activity('Tables - Bronze Lakehouse').output,'rowsCopied'),string(activity('Tables - Bronze Lakehouse').output.rowsCopied),0)
