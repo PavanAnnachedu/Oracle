@@ -1,0 +1,43 @@
+CREATE OR ALTER PROCEDURE Log.usp_InsertPartnerLog
+ @PartnerName NVARCHAR(200),
+ @SchemaName NVARCHAR(200),
+ @TableName NVARCHAR(200),
+ @StartTime DATETIME2(3),
+ @EndTime DATETIME2(3) = NULL,
+ @Status VARCHAR(50),
+ @ErrorMsg NVARCHAR(MAX) = NULL,
+ @RowProcessed BIGINT = NULL
+ AS
+ BEGIN
+ SET NOCOUNT ON;
+
+ BEGIN TRY
+ INSERT INTO Log.PartnerLog
+ (
+ PartnerName,
+ SchemaName,
+ TableName,
+ StartTime,
+ EndTime,
+ Status,
+ ErrorMsg,
+ RowProcessed,
+ CreatedDate
+ )
+ VALUES
+ (
+ @PartnerName,
+ @SchemaName,
+ @TableName,
+ @StartTime,
+ @EndTime,
+ @Status,
+ @ErrorMsg,
+ @RowProcessed,
+ SYSUTCDATETIME()
+ );
+ END TRY
+ BEGIN CATCH
+ THROW;
+ END CATCH
+ END;
