@@ -1,0 +1,40 @@
+-- 1. Source connection (single global row today)
+ CREATE TABLE Partner.SourceConnection (
+ SourceWarehouseId VARCHAR(36),
+ SourceWarehouse VARCHAR(100),
+ SourceSchemaName VARCHAR(100),
+ SourceWarehouseConnectionString VARCHAR(500),
+ SourceWorkspaceId VARCHAR(36)
+ );
+
+-- 2. Table definitions (one row per table, ~34 rows regardless of partner count)
+ CREATE TABLE Partner.TableDefinition (
+ TableId VARCHAR(36),
+ TableName VARCHAR(200),
+ SourceWarehouseId VARCHAR(36),
+ SourceQuery VARCHAR(4000),
+ WaterMarkField VARCHAR(100),
+ FilterType INT,
+ PrimaryKey VARCHAR(500)
+ );
+
+-- 3. Partner master (one row per partner — 20 rows once scaled, not 20x34)
+ CREATE TABLE Partner.PartnerMaster (
+ PartnerId INT,
+ PartnerName VARCHAR(100),
+ PartnerWarehouseName VARCHAR(100),
+ PartnerStagingSchema VARCHAR(100),
+ PartnerSchemaName VARCHAR(100),
+ PartnerConnectionString VARCHAR(500),
+ PartnerWarehouseId VARCHAR(36),
+ PartnerWorkspaceId VARCHAR(36)
+ );
+
+-- 4. Partner-Table config (only table that scales with partners x tables, but narrow)
+ CREATE TABLE Partner.Config (
+ Id VARCHAR(36),
+ PartnerId INT,
+ TableId VARCHAR(36),
+ WaterMarkValue DATETIME2(6),
+ IsActive BIT
+ );
