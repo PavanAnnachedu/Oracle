@@ -1,0 +1,58 @@
+-- Step 1: SourceConnection (collapses to 1 row)
+ INSERT INTO Partner.SourceConnection
+ (SourceWarehouseId, SourceWarehouse, SourceSchemaName, SourceWarehouseConnectionString, SourceWorkspaceId)
+ SELECT
+ CONVERT(VARCHAR(36), ROW_NUMBER() OVER (ORDER BY SourceWarehouse)),
+ SourceWarehouse,
+ SourceSchemaName,
+ SourceWarehouseConnectionString,
+ SourceWorkspaceId
+ FROM (
+ SELECT DISTINCT SourceWarehouse, SourceSchemaName, SourceWarehouseConnectionString, SourceWorkspaceId
+ FROM Partner.Config_Legacy
+ ) x; 
+
+-- Step 2: TableDefinition (one row per distinct TableName, ~34 rows)
+ INSERT INTO Partner.TableDefinition
+ (TableId, TableName, SourceWarehouseId, SourceQuery, WaterMarkField, FilterType, PrimaryKey)
+ SELECT
+ CONVERT(VARCHAR(36), ROW_NUMBER() OVER (ORDER BY x.TableName)),
+ x.TableName,
+ sc.SourceWarehouseId,
+ x.SourceQuery,
+ x.WaterMarkField,
+ x.FilterType,
+ x.PrimaryKey
+ FROM (
+ SELECT DISTINCT TableName, SourceQuery, WaterMarkField, FilterType, PrimaryKey
+ FROM Partner.Config_Legacy
+ ) x
+ CROSS JOIN Partner.SourceConnection sc; 
+
+-- Step 3: PartnerMaster (one row per distinct PartnerId — PartnerId itself is already a real business key, kept as-is)
+ INSERT INTO Partner.PartnerMaster
+ (PartnerId, PartnerName, PartnerWarehouseName, PartnerStagingSchema, PartnerSchemaName,
+ PartnerConnectionString, PartnerWarehouseId, PartnerWorkspaceId)
+ SELECT DISTINCT
+ PartnerId,
+ PartnerName,
+ PartnerWarehouseName,
+ PartnerStagingSchema,
+ PartnerSchemaName,
+ PartnerConnectionString,
+ PartnerWarehouseId,
+ PartnerWorkspaceId
+ FROM Partner.Config_Legacy; 
+
+-- Step 4: new thin Partner.Config (one row per PartnerId + TableName)
+ INSERT INTO Partner.Config
+ (Id, PartnerId, TableId, WaterMarkValue, IsActive)
+ SELECT
+ CONVERT(VARCHAR(36), ROW_NUMBER() OVER (ORDER BY cl.PartnerId, td.TableName)),
+ cl.PartnerId,
+ td.TableId,
+ cl.WaterMarkValue,
+ cl.IsActive
+ FROM Partner.Config_Legacy cl
+ JOIN Partner.TableDefinition td
+ ON td.TableName = cl.TableName;
