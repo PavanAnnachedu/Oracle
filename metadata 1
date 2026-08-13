@@ -1,0 +1,27 @@
+CREATE VIEW Partner.vw_Config AS
+ SELECT
+ c.Id,
+ p.PartnerName,
+ t.TableName,
+ sc.SourceWarehouse,
+ sc.SourceSchemaName,
+ sc.SourceWarehouseConnectionString,
+ sc.SourceWarehouseId,
+ sc.SourceWorkspaceId,
+ p.PartnerId,
+ p.PartnerWarehouseName,
+ p.PartnerStagingSchema,
+ p.PartnerSchemaName,
+ p.PartnerConnectionString,
+ p.PartnerWarehouseId,
+ p.PartnerWorkspaceId,
+ t.SourceQuery,
+ t.WaterMarkField,
+ c.WaterMarkValue,
+ c.IsActive,
+ t.FilterType,
+ t.PrimaryKey
+ FROM Partner.Config c
+ JOIN Partner.PartnerMaster p ON p.PartnerId = c.PartnerId
+ JOIN Partner.TableDefinition t ON t.TableId = c.TableId
+ JOIN Partner.SourceConnection sc ON sc.SourceWarehouseId = t.SourceWarehouseId;
