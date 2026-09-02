@@ -1,0 +1,19 @@
+-- Quick check — how many rows fall outside Oracle's 61-month window
+SELECT
+    COUNT(*) AS TotalRowsInFabric,
+
+    SUM(CASE 
+        WHEN CLOSURE_DATE >= DATEADD(
+            MONTH, -61,
+            DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+        THEN 1 ELSE 0 
+    END) AS RowsWithin61Months,
+
+    SUM(CASE 
+        WHEN CLOSURE_DATE < DATEADD(
+            MONTH, -61,
+            DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+        THEN 1 ELSE 0 
+    END) AS RowsOlderThan61Months
+
+FROM dbo.V_T_F_ACCOUNT_CLOSURE_AAV2
