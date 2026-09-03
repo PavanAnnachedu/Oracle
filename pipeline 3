@@ -1,0 +1,24 @@
+Activity	Description
+Lkp_GetPartnerConfigList	Looks up active partner/table configs for the given PartnerId and builds a per-row FinalSourceQuery by applying the FilterType and watermark substitution rules.
+ForEach_LoadPartnerData	Loops over the config rows from Lkp_GetPartnerConfigList (12 in parallel) and drives the staging → partner-schema copy and logging steps for each.
+SetVar_PartnerEndpoint	Captures the current partner's warehouse connection string into the PartnerEndpoint variable.
+SetVar_PartnerArtifactId	Captures the current partner's warehouse (artifact) ID into the PartnerArtifactId variable.
+SetVar_PartnerWorkspaceId	Captures the current partner's Fabric workspace ID into the PartnerWorkspaceId variable.
+Cpy_SourceToPartnerStaging	Drops/recreates the partner's staging table and loads it by running the row's FinalSourceQuery against the source warehouse.
+Cpy_SourceToPartnerSchema	Moves the staged rows from dbo into the partner's own schema, upserting on the table's primary key.
+Partner_Success	Logs a success entry (row count, table, timestamps) once the copy into the partner's schema succeeds.
+Stage_StartTime	Records the UTC start time before the staging copy runs, for later logging.
+Partner_StartTime	Re-records the UTC start time after staging finishes, to time the partner-schema copy separately.
+Partner_Failure	Logs a failure entry with the copy activity's error message if the copy into the partner's schema fails.
+Stage_Success	Logs a success entry for the staging copy step.
+Stage_Failure	Logs a failure entry with the error message if the staging copy fails.
+Lkp_GetDistinctPartnerList	Rolls the config tables up to one row per partner and builds a combined watermark query per partner (⚠️ this SQL block was one of the low-confidence transcriptions).
+ForEach_RefreshPartnerWaterMark	Loops sequentially through each distinct partner and runs their watermark query to refresh Partner.WaterMark_Config.
+SetVar_PartnerEndpoint_WM	Captures the current partner's connection string for this loop (separate copy of the variable used in the load loop).
+SetVar_PartnerArtifactId_WM	Captures the current partner's warehouse ID for this loop.
+SetVar_PartnerWorkspaceId_WM	Captures the current partner's workspace ID for this loop.
+Cpy_PartnerWaterMarkToMetadata	Runs the partner's watermark query against their warehouse and inserts the results into Partner.WaterMark_Config.
+SetVar_PartnerWaterMarkQuery	Loads the per-partner watermark query text into the PartnerWaterMarkQuery variable so the copy activity can execute it.
+Script1	Clears out Partner.WaterMark_Config so the watermark refresh loop starts from empty.
+Scr_UpdateConfigWaterMarkValue	Writes the newly computed watermark values back into Partner.ConfigMaster so the next pipeline run picks up from there.
+Wait1	1-second pause after Script1, likely to let the delete commit before the next lookup runs.
