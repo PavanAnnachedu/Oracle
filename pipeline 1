@@ -1,0 +1,131 @@
+# PL_Load_Oracle_To_Fabric — Activity Reference
+
+**What this pipeline does, in one paragraph:** It pulls a list of "active" source tables from a config table, captures each table's last-processed watermark value, hands those watermarks off to a second Fabric pipeline that does the actual Oracle extraction, then loops back over the same table list to copy the freshly staged data into the target warehouse, update the watermarks for next time, and rebuild two monthly summary tables.
+
+Activities below are listed in the order they actually run (their dependency chain), not the raw order in the JSON file. Nested activities (the ones inside a `ForEach` or `Switch`) are indented under their parent.
+
+---
+
+## 1. Get_Metadata_Config
+**Type:** Lookup · **Runs first — no dependencies**
+
+Queries `WH_Metadata.Config_Oracle.ConfigETL` for up to 100 rows where `IsActive = 1`. Each row describes one source table: schema, table name, watermark field/value, primary key, etc. This is the master list of "what needs processing this run," and its output feeds directly into the next activity.
+
+## 2. FE_Loop_Tables
+**Type:** ForEach · **Depends on:** Get_Metadata_Config (Succeeded)
+
+Loops over every config row from step 1, up to 10 tables in parallel. For each table, it runs three `Switch` activities in sequence that figure out which table this is and stash its watermark value into a dedicated pipeline variable (e.g., `T_D_BRANCH_WaterMarkValue`). By the time this loop finishes, every table's watermark is sitting in a pipeline variable, ready to be passed downstream.
+
+  ### 2a. Switch1
+  **Type:** Switch · Matches on table name, 23 cases
+
+  For 23 specific tables, sets that table's watermark variable from `@item().WaterMarkValue`. Any table that doesn't match one of the 23 falls through to **Wait1** (a harmless 1-second no-op).
+
+  ### 2b. Switch2
+  **Type:** Switch · Depends on: Switch1 (Succeeded) · 5 cases
+
+  Handles 5 more tables the same way. No match → **Wait2** (1-second no-op).
+
+  ### 2c. Switch3
+  **Type:** Switch · Depends on: Switch2 (Succeeded) · 2 cases
+
+  Handles the final 2 tables. No match → **Wait3** (1-second no-op).
+
+  **Full table → watermark variable mapping (all 30):**
+
+  | Source Table | Watermark Variable |
+  |---|---|
+  | V_ACCOUNT_SUMMARY_AAV2 | V_ACCOUNT_SUMMARY_AAV2_WaterMarkValue |
+  | V_T_D_FUND | V_T_D_FUND_WaterMarkValue |
+  | V_T_D_PLAN_V2 | V_T_D_PLAN_V2_WaterMarkValue |
+  | V_T_D_TXN_TYPE | V_T_D_TXN_TYPE_WaterMarkValue |
+  | T_D_BRANCH | T_D_BRANCH_WaterMarkValue |
+  | T_D_DEALER | T_D_DEALER_WaterMarkValue |
+  | T_D_REP | T_D_REP_WaterMarkValue |
+  | T_D_CSR | T_D_CSR_WaterMarkValue |
+  | V_T_F_ACCOUNT_ENROLLMENT_AAV2 | V_T_F_ACCOUNT_ENROLLMENT_AAV2_WaterMarkValue |
+  | V_T_F_ACCOUNT_CLOSURE_AAV2 | V_T_F_ACCOUNT_CLOSURE_AAV2_WaterMarkValue |
+  | T_DW_ACCESS_CONTROL | T_DW_ACCESS_CONTROL_WaterMarkValue |
+  | T_DW_ACCESS_PARTY | T_DW_ACCESS_PARTY_WaterMarkValue |
+  | V_T_D_TIME | V_T_D_TIME_WaterMarkValue |
+  | T_D_DISBURSEMENT | T_D_DISBURSEMENT_WaterMarkValue |
+  | T_D_DORMANCY | T_D_DORMANCY_WaterMarkValue |
+  | T_D_FUNDED | T_D_FUNDED_WaterMarkValue |
+  | T_D_AGE | T_D_AGE_WaterMarkValue |
+  | T_F_ORGANIZATION_MEMBER_AFFILIATION | T_F_ORGANIZATION_MEMBER_AFFILIATION_WaterMarkValue |
+  | T_D_ORGANIZATION_STATUS | T_D_ORGANIZATION_STATUS_WaterMarkValue |
+  | T_D_ORGANIZATION_TYPE | T_D_ORGANIZATION_TYPE_WaterMarkValue |
+  | T_F_ORGANIZATION_ACCOUNT | T_F_ORGANIZATION_ACCOUNT_WaterMarkValue |
+  | V_T_D_ORGANIZATION_BI | V_T_D_ORGANIZATION_BI_WaterMarkValue |
+  | T_D_MEMBER_STATUS | T_D_MEMBER_STATUS_WaterMarkValue |
+  | V_T_D_PROFILE_NP | V_T_D_PROFILE_NP_WaterMarkValue |
+  | T_D_MEMBER_PERM_TYPE | T_D_MEMBER_PERM_TYPE_WaterMarkValue |
+  | T_D_MEMBER_ROLE_TYPE | T_D_MEMBER_ROLE_TYPE_WaterMarkValue |
+  | T_F_POOL_ACCOUNT_ASSETS | T_F_POOL_ACCOUNT_ASSETS_WaterMarkValue |
+  | T_D_OMNIBUS_SOURCE | T_D_OMNIBUS_SOURCE_WaterMarkValue |
+  | V_T_F_ACCOUNT_SNAPSHOT_AAV2 | V_T_F_ACCOUNT_SNAPSHOT_AAV2_WaterMarkValue |
+  | V_T_F_ACCT_TXN_AAV2 | V_T_F_ACCT_TXN_AAV2_WaterMarkValue |
+
+## 3. Invoke pipeline
+**Type:** InvokePipeline · **Depends on:** FE_Loop_Tables (Succeeded)
+
+Calls a separate Fabric pipeline, `01_Invoke_Pipeline` (in workspace `DEV_AGS_AA2_DI&T`), and passes it all 30 watermark variables gathered in step 2 as parameters. The pipeline waits for that call to fully finish (`waitOnCompletion: true`) before moving on. This is almost certainly where the actual Oracle-side data extraction happens — this pipeline hands off the "what's changed since last time" info and waits for the extraction to land in staging.
+
+## 4. Lkp_StagetoTarget
+**Type:** Lookup · **Depends on:** Invoke pipeline (Succeeded)
+
+Re-queries the same active-table config list used in step 1. Its saved description says it "builds the FinalSourceQuery per row based on FilterType/watermark logic," but the query actually attached to it is the same plain `SELECT TOP (100) ... WHERE IsActive = 1` as Get_Metadata_Config — worth a quick check that this is intentional (re-reading the same config) rather than a leftover from before some filter logic was added. Its output feeds the final loop.
+
+## 5. ForEach_LoadPartnerData
+**Type:** ForEach · **Depends on:** Lkp_StagetoTarget (Succeeded)
+
+Loops over the table list again (10 in parallel) and, for each one, copies the staged data into the target warehouse and logs the outcome.
+
+  ### 5a. StartTime
+  **Type:** SetVariable
+
+  Stamps the current UTC time into a `StartTime` variable, used purely for duration logging in the next steps.
+
+  ### 5b. Cpy_Stagetodbo
+  **Type:** Copy · Depends on: StartTime (Succeeded)
+
+  Reads `select * from DF_Stage.<TableName>` and upserts the results into `WH_Target.dbo.<TableName>` — matching existing rows on the table's primary key (auto-creates the target table if it doesn't exist yet). This is the actual "move data from staging into the real target table" step.
+
+  ### 5c. Success
+  **Type:** SqlServerStoredProcedure · Depends on: Cpy_Stagetodbo (Succeeded)
+
+  Calls `Log.usp_InsertPartnerLog` to write a success log entry — table name, schema, start/end time, and rows copied.
+
+  ### 5d. Failure
+  **Type:** SqlServerStoredProcedure · Depends on: Cpy_Stagetodbo (Failed)
+
+  Calls the same logging procedure with status "Failure," pulling the actual error message off the failed Copy activity (falling back to a generic "unknown error due to connection establishment" message if the copy didn't produce one).
+
+## 6. Update_Watermark
+**Type:** SqlServerStoredProcedure · **Depends on:** ForEach_LoadPartnerData (Succeeded)
+
+Calls `Config_Oracle.UpdateWaterMarkSP1` on `WH_Metadata` — this writes the new "last processed" watermark values back to the config table so the *next* pipeline run only picks up rows that changed since this run.
+
+## 7. Upsert_Satge_to_dbo — currently disabled
+**Type:** SqlServerStoredProcedure · **State: Inactive** (auto-succeeds without running) · **No dependencies wired**
+
+Calls `dbo.sp_Load_ALL_AA2_Tables` on `WH_Target`. Its saved description says it's meant to run after "Invoke pipeline" completes, but as configured today it has no `dependsOn` and is marked Inactive — so it currently does nothing in a live run. Worth confirming whether this was deliberately turned off or is a leftover that needs to be reconnected.
+
+## 8. Script1
+**Type:** Script · **Depends on:** Update_Watermark (Succeeded)
+
+Rebuilds `WH_Target.dbo.TXN_PLAN_MONTH_AGG`, a monthly aggregate of transaction data (amount, shares, transaction count) grouped by time period, plan, fund, and transaction type. Creates the table if it doesn't exist; otherwise merges in the latest values. Logs its own success/failure to `WH_Metadata.Log.Upsert_LOG`.
+> ⚠️ This activity's SQL was transcribed from a badly glare-affected photo — worth a side-by-side check against the actual source before relying on it.
+
+## 9. Script2
+**Type:** Script · **Depends on:** Script1 (Succeeded)
+
+Rebuilds `WH_Target.dbo.SNAPSHOT_MONTH_AGG`, a monthly snapshot aggregate (account count, total assets) sourced from `V_T_F_ACCOUNT_SNAPSHOT_AAV2`. Same create-or-reload pattern as Script1, and logs to the same table.
+> ⚠️ This one came from the worst photo quality in the whole batch (heavy moiré interference) — treat this as an approximation of the logic rather than a reliable transcription, and verify carefully against source.
+
+---
+
+## Things worth double-checking with the team
+- **Lkp_StagetoTarget** — description promises "FinalSourceQuery" logic that isn't visible in the query actually attached to it.
+- **Upsert_Satge_to_dbo** — inactive and disconnected from the dependency graph despite its description implying it should run.
+- **Script1 / Script2 SQL** — both reconstructed from photos; Script2 especially should be verified against the live pipeline before anyone treats it as accurate documentation.
