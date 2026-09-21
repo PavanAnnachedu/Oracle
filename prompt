@@ -1,0 +1,29 @@
+# Generate Stored Procedure for AA2.0
+
+Generate a complete Fabric Warehouse stored procedure following AA2.0 rules.
+
+## Input
+Table Name: {TABLE_NAME}
+Partner Schema: {PARTNER_NAME}
+Columns and Types:
+{COLUMN_LIST}
+Primary Key(s): {PRIMARY_KEY}
+FilterType: {FILTER_TYPE}
+WaterMark Field: {WATERMARK_FIELD}
+
+## Requirements
+1. Check if target table exists in partner schema
+   - IF NOT EXISTS → CREATE TABLE + INSERT from staging (first run)
+   - IF EXISTS → TRUNCATE + INSERT from staging (subsequent runs)
+2. Source table: dbo.[STAGING_TABLE_NAME] in WH_Target
+3. Target table: [PARTNER_NAME].[TABLE_NAME] in partner warehouse
+4. Apply correct data types per AA2.0 standards
+5. Wrap in TRY/CATCH
+6. Log to Metadata.Log on success AND failure:
+   - TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount
+7. If FilterType = 1: include JOIN to T_DW_ACCESS_CONTROL on PLAN_KEY
+8. If FilterType = 2 or else: no partner filter
+
+## Output
+Complete CREATE OR ALTER PROCEDURE statement
+ready to run in Fabric Warehouse SQL editor
