@@ -1,0 +1,169 @@
+# AA2.0 Microsoft Fabric ETL — Cursor AI Rules
+
+## Project Context
+- Project: Census Analytics 2.0 (AA2.0)
+- Company: Ascensus / Persistent Systems
+- Team: DataOps / DI&T
+- Developer: Pavan Annachedu
+
+## Architecture Constraints (Non-Negotiable)
+- Source: Oracle REPT01
+- Target: Microsoft Fabric Warehouse
+- NO Lakehouses
+- NO Notebooks in production pipeline
+- Tools allowed: Pipelines + Dataflows + Warehouses + Stored Procedures ONLY
+- All connections must be parameterized — never hardcoded
+- Use TRUNCATE instead of DROP
+- IsActive flag drives what runs (1=active, 0=skip)
+- All activities must have descriptions
+
+## Two Main Pipelines
+1. PL_Load_Oracle_To_Fabric — Oracle → WH_Target (35 tables)
+2. PL_Partner_Data_Sync_And_WaterMark_Refresh — WH_Target → 14 Partner Warehouses
+
+## Data Type Standards (Oracle → Fabric)
+- Oracle NUMBER (ID columns) → INTEGER
+- Oracle NUMBER (financial/money) → DECIMAL(18,6)
+- Oracle DATE (date only) → DATE
+- Oracle TIMESTAMP / TLM → DATETIME2
+- Oracle VARCHAR2 → NVARCHAR(appropriate size)
+- Oracle NUMBER default → DECIMAL(18,6) if unsure
+
+## FilterType Rules
+- FilterType = 1: Fact tables — partner filter + watermark
+- FilterType = 2: Reference tables — watermark only, no partner filter
+- FilterType = else/0: Lookup tables — full copy every run, no filter
+
+## Partner Filter Template (FilterType = 1)
+SELECT F.* FROM dbo.[TableName] F
+JOIN dbo.T_DW_ACCESS_CONTROL C ON C.PLAN_KEY = F.PLAN_KEY
+WHERE C.ACCESS_PARTY_ID = {PartnerId}
+AND C.ACTIVE_RECORD_IND = 'Y'
+
+## Watermark Filter Logic
+- Watermark fields: TLM or DW_UPD_DTTM or SRC_UPD_TS
+- Always use >= (not >)
+- Always apply -7 day buffer in watermark SP
+- FinalSourceQuery logic:
+  FilterType 1: Replace {PartnerId} + append watermark (AND if WHERE exists, else WHERE)
+  FilterType 2: Append WHERE watermark only
+  FilterType else: No modification
+
+## Naming Conventions
+### Pipelines
+- PL_[Action]_[Source]_[Destination]
+- Examples:
+  PL_Load_Oracle_To_Fabric
+  PL_Partner_Data_Sync_And_WaterMark_Refresh
+  PL_Load_Closure_Enrollment_Weekly
+
+### Activities
+- LKP_ = Lookup
+- FE_ = ForEach
+- CPY_ = Copy Data
+- SP_ = Stored Procedure
+- SCR_ = Script
+- SET_ = Set Variable
+- SWT_ = Switch
+- IF_ = If Condition
+
+### Stored Procedures
+- SP_Load_[TableName] (individual table SPs)
+- SP_Load_ALL_AA2_Tables (master SP)
+- SP_Update_WaterMark
+- SP_Log_Table_Detail
+
+### Schemas
+- dbo = staging (temporary per run)
+- [STATE_NAME] = final integrated partner schema (e.g. VIRGINIA, ALASKA)
+- staging = temporary landing zone
+
+### Warehouses
+- WH_Target = consolidated source warehouse
+- WH_Metadata = metadata/config warehouse
+- WH_[STATENAME] = partner warehouse (e.g. WH_VIRGINIA)
+
+## SP Template Rules
+- Always: TRUNCATE + INSERT (never MERGE)
+- Always: TRY/CATCH per table
+- Always: Log to Metadata.Log (TableName, StartDate, EndDate, Status, ErrorMessage, InsertedRowCount)
+- Always: IF table NOT EXISTS → CREATE + INSERT (first run)
+- Always: IF table EXISTS → TRUNCATE + INSERT (subsequent runs)
+- One failure must NOT stop other tables
+- Schema: [PARTNER_NAME].[SP_Load_TableName]
+
+## Metadata Tables (WH_Metadata)
+### Config_Oracle.ConfigETL (Pipeline 1)
+Columns: Id, SourceSchemaName, SourceTableName, SourceQuery,
+WaterMarkField, WaterMarkValue, PrimaryKey, LoadType,
+RefreshFrequency, IsFullLoad, IsActive, LastModifiedDate
+
+### Partner Schema (Pipeline 2 — 5 normalized tables)
+- Partner.PartnerMaster: PartnerId, PartnerName, PartnerWarehouseName,
+  PartnerStagingSchema, PartnerSchemaName, PartnerConnectionString,
+  PartnerWarehouseId, PartnerWorkspaceId
+- Partner.ConfigMaster: Id, PartnerId, TableId, WaterMarkValue, IsActive
+- Partner.TableDefinition: TableId, TableName, SourceWarehouseId,
+  SourceQuery, WaterMarkField, FilterType, PrimaryKey
+- Partner.SourceConnection: SourceWarehouseId, SourceWarehouse,
+  SourceSchemaName, SourceWarehouseConnectionString, SourceWorkspaceId
+- Partner.WaterMark_Config: Id, TableName, WaterMarkField,
+  WaterMarkValue, PartnerId (temp — cleared each run)
+
+## All 35 Tables Reference
+### Fact/Transaction (FilterType = 1)
+V_T_F_ACCT_TXN_AAV2 | TLM | ACCOUNT_PROFILE_KEY, SEQ_TXN_ID
+V_ACCOUNT_SUMMARY_AAV2 | TLM | ACCOUNT_PROFILE_KEY
+V_T_F_ACCOUNT_CLOSURE_AAV2 | DW_UPD_DTTM | ACCOUNT_PROFILE_KEY, ACCOUNT_CLOSURE_TIME_KEY
+V_T_F_ACCOUNT_ENROLLMENT_AAV2 | SRC_UPD_TS | ACCOUNT_PROFILE_KEY, TIME_KEY
+V_T_F_ACCOUNT_SNAPSHOT_AAV2 | DW_UPD_DTTM | ACCOUNT_PROFILE_KEY, TIME_KEY
+TXN_PLAN_MONTH_AGG | UPDATED_DATE | TIME_KEY, END_OF_MONTH, PLAN_KEY, FUND_KEY
+
+### Organization (FilterType = 1)
+T_F_ORGANIZATION_ACCOUNT | DW_UPD_DTTM | ORGANIZATION_KEY
+T_F_ORGANIZATION_MEMBER_AFFILIATION | DW_UPD_DTTM | ORGANIZATION_KEY
+V_T_D_ORGANIZATION_BI | DW_UPD_DTTM | ORGANIZATION_KEY
+V_T_D_PROFILE_NP | DW_UPD_DTTM | PROFILE_KEY
+
+### Reference (FilterType = 2)
+T_DW_ACCESS_CONTROL | DW_UPD_DTTM | ACCESS_CONTROL_ID
+T_DW_ACCESS_PARTY | DW_UPD_DTTM | ACCESS_PARTY_ID
+V_T_D_TIME | DW_UPD_DTTM | TIME_KEY
+T_D_DISBURSEMENT | TLM | SEQ_DISBURSEMENT_ID
+T_D_ORGANIZATION_STATUS | DW_UPD_DTTM | ORGANIZATION_STATUS_KEY
+T_D_ORGANIZATION_TYPE | DW_UPD_DTTM | ORGANIZATION_TYPE_KEY
+T_D_MEMBER_STATUS | DW_UPD_DTTM | MEMBER_STATUS_CODE
+T_D_MEMBER_PERM_TYPE | DW_UPD_DTTM | MEMBER_PERM_TYPE_KEY
+T_D_MEMBER_ROLE_TYPE | DW_UPD_DTTM | MEMBER_ROLE_TYPE_KEY
+T_F_POOL_ACCOUNT_ASSETS | DW_UPD_DTTM | ACCOUNT_PROFILE_KEY
+T_D_OMNIBUS_SOURCE | DW_UPD_DTTM | OMNIBUS_SOURCE_KEY
+
+### Lookup/Full Copy (FilterType = else)
+T_D_PLAN | TLM | PLAN_KEY
+T_D_DEALER | TLM | DEALER_KEY
+T_D_BRANCH | TLM | BRANCH_KEY
+T_D_REP | TLM | REP_KEY
+T_D_CSR | TLM | CSR_KEY
+V_T_D_FUND | TLM | FUND_KEY
+V_T_D_TXN_TYPE | TLM | TXN_TYPE_KEY
+T_D_DORMANCY | DW_UPD_DTTM | DORMANCY_KEY
+T_D_FUNDED | DW_UPD_DTTM | FUNDED_KEY
+T_D_AGE | DW_UPD_DTTM | AGE_KEY
+
+## Current Partners (14)
+129 | VIRGINIA | WH_VIRGINIA
+130 | ALASKA | WH_ALASKA
+131 | CONNECTICUT | WH_CONNECTICUT
+132 | DELAWARE | WH_DELAWARE
+133 | KANSAS | WH_KANSAS
+134 | MICHIGAN | WH_MICHIGAN
+135 | MINNESOTA | WH_MINNESOTA
++ 7 more partners loaded
+
+## Open Issues to Be Aware Of
+1. Closure + Enrollment need weekly pipeline (not daily)
+2. Hard delete mechanism not yet implemented
+3. IsActive=1 filter recommended over hardcoded PartnerId IN()
+4. Snapshot table should run monthly only
+5. Deployment: use Fabric Deployment Pipeline NOT GitHub
+6. Metadata data does not move with deployment — needs separate migration pipeline
