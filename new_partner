@@ -1,0 +1,39 @@
+# New Partner Onboarding Script Generator
+
+Generate complete onboarding SQL scripts for a new AA2.0 partner.
+
+## Input
+Partner Name: {PARTNER_NAME}
+Access_Party_ID: {PARTNER_ID}
+Plan_Key(s): {PLAN_KEYS}
+Traunch_ID: {TRAUNCH_ID}
+Access Start Date: {START_DATE}
+Partner Warehouse Name: WH_{PARTNER_NAME}
+Partner Connection String: {CONNECTION_STRING}
+Partner Warehouse ID: {WAREHOUSE_ID}
+Partner Workspace ID: {WORKSPACE_ID}
+
+## Generate All of the Following
+
+### 1. Oracle DML (DBA runs this in Oracle)
+- INSERT into UIIDWP01.T_DW_ACCESS_PARTY
+- INSERT into UIIDWP01.T_DW_ACCESS_CONTROL
+  (one row per Plan_Key)
+
+### 2. WH_Metadata INSERT — PartnerMaster (1 row)
+INSERT into Partner.PartnerMaster
+
+### 3. WH_Metadata INSERT — ConfigMaster (35 rows)
+INSERT into Partner.ConfigMaster
+SELECT all 35 TableIds from Partner.TableDefinition
+WaterMarkValue = '2021-08-01' (first full load start)
+IsActive = 1
+
+### 4. Verification Queries
+- SELECT from Partner.PartnerMaster WHERE PartnerId = {PARTNER_ID}
+- SELECT COUNT(*) from Partner.ConfigMaster WHERE PartnerId = {PARTNER_ID}
+- Expected: 1 row in PartnerMaster, 35 rows in ConfigMaster
+
+### 5. Post-Run Verification
+- Query Metadata.Log in new partner warehouse
+- Expected: 35 SUCCESS rows after pipeline run
