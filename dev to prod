@@ -1,0 +1,148 @@
+🚨 John's Panic Attack Moment — Key Realization
+
+John realized almost everything is running under his personal credentials — if he fell and broke his neck, all pipelines would just stop. This triggered the need to move to Service Accounts immediately.
+
+1. Service Account — Top Priority
+
+The Problem:
+
+All connections currently use personal credentials (DWBI as database user)
+DWBI user does NOT have SELECT privileges on all underlying tables/views needed for AA2.0
+If John or Pavan leaves → everything stops
+
+The Solution:
+
+Set up a Microsoft Service Account (not personal accounts)
+Use this service account for ALL connections going forward
+John already requested a Microsoft Service Account
+John will test this afternoon whether a service principal can connect a pipeline to a warehouse
+
+What needs to happen:
+
+1. Service account created ✅ (John requested)
+2. DBAs grant SELECT privileges to service account
+   on ALL tables and views used in AA2.0
+   (UIIDWP01, DW_BI_DEV, DW_BI schemas)
+3. All connections in pipelines → switch to service account
+4. All dataflow connections → switch to service account
+5. All warehouse connections → switch to service account
+6. Workspace identity option explored as alternative
+2. Connections That Need Parameterization
+
+Current issue:
+
+Oracle connections are hardcoded
+Warehouse connections use personal credentials
+When promoting to Prod → connections break
+
+What needs to be parameterized:
+
+→ Oracle connection (REPT01)
+→ Warehouse connections (WH_Target, WH_Metadata, partner warehouses)
+→ Database connections for dataflows
+→ Schema connections (UIIDWP01, DW_BI_DEV, DW_BI)
+
+John creating Jira tickets for Pavan:
+
+Ticket: Parameterization of connections and schemas
+Lists everything that needs to be parameterized
+So Pavan has a tracking list
+3. Fabric Deployment Pipeline — Confirmed Approach
+
+Confirmed: Use Fabric Deployment Pipeline (NOT GitHub)
+
+Key points:
+
+Currently using Fort One fabric data pipelines (bottom one)
+Deployment pipeline person becomes owner of ALL objects inside it
+Including production workspace objects
+Solution: use shared Microsoft Service Account to do promotions
+Log out of personal account
+Log in with service account
+Do the promotion
+Objects owned by service account not individual
+
+Deployment pipeline limitation:
+
+When deploying from Dev → Prod:
+→ Structure moves ✅
+→ Artifacts move ✅
+→ Connections auto-remap ✅
+→ DATA does NOT move ❌
+→ Metadata tables will be EMPTY in Prod ❌
+
+Solution for initial Prod data load:
+
+Instead of running Oracle pipeline again in Prod:
+→ Use COPY JOBS to copy data from Dev warehouse to Prod warehouse
+→ Much faster than re-pulling from Oracle
+→ John confirmed: "That'll save us a lot of time"
+→ Copy jobs: Dev WH_Target → Prod WH_Target
+→ Copy jobs: Dev WH_Metadata → Prod WH_Metadata
+→ Copy jobs: Dev partner warehouses → Prod partner warehouses
+4. Schema/Connection Changes for DWBI
+
+Critical finding:
+
+Current connections use DWBI Dev schema
+All data flows and tables listed in spreadsheet as DWBI Dev
+DBAs need to create copy of views in DWBI (not DWBI Dev) schema
+John is working with DBAs to get SELECT privileges on new schema
+
+Action:
+
+John → DBAs: Create copy of all AA2.0 views in DWBI schema
+Pavan → Update all connection references from DWBI Dev → DWBI
+5. Scheduling in Prod — Confirmed
+
+What runs when:
+
+Table/Pipeline	Schedule
+All main tables	Weekly (Saturday — spread throughout)
+Account Summary	Daily
+Account Snapshot	Daily (only pulls if delta exists — no data = just latest watermark, fast)
+TXN_PLAN_MONTH_AGG (Count TXN)	Daily
+Closure + Enrollment	Weekly (confirm with BI team)
+Everything else	Move to weekly once stable
+
+Key insight on Snapshot:
+
+Snapshot only loads once a month (2nd day of month)
+But running daily is fine because:
+→ If no delta → pipeline just sees latest watermark
+→ Pulls nothing → completes instantly
+→ No wasted compute on empty runs
+
+Scheduling approach:
+
+Run 8 AM Saturday for most tables
+Spread tables throughout Saturday
+Keep daily: Account Summary, Snapshot, TXN Count
+Once BI team confirms → finalize schedule
+6. Deployment Pipeline Ownership Issue
+
+Problem:
+
+Whoever runs the deployment pipeline
+→ Becomes OWNER of all objects inside it
+→ Including ALL objects in production workspace
+→ If that person leaves → ownership problem
+
+Solution:
+
+Use Microsoft Service Account to run deployments
+→ Log out of personal account
+→ Log in as service account
+→ Run deployment pipeline
+→ Service account owns everything in Prod
+→ Not tied to any individual person
+→ Team can share service account credentials
+7. Contract — Important Personal Note
+
+John mentioned:
+
+Contract ends October 13th or 15th (6-month contract)
+John was not aware it was ending so soon
+John wants to keep Pavan and team through end of year
+John will talk to Henry about extension
+"There's gonna be additional work and I'm sure we can maximize how we utilize you"
