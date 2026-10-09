@@ -1,0 +1,19 @@
+SELECT
+    C.Id,
+    C.SchemaName,
+    C.TableName,
+    V.FieldType,
+    V.FieldName,
+    V.FieldValue,
+    C.PrimaryKey,
+    C.AlternatePrimaryKey,
+    C.LastModifiedDate,
+    C.IsActive
+FROM [Config_Oracle].[ConfigETL] C
+CROSS APPLY (
+    VALUES
+        ('WaterMarkField', C.WaterMarkField),
+        ('WaterMarkValue', C.WaterMarkValue)
+) V (FieldType, FieldValue)
+WHERE C.IsActive = 1
+  AND C.IsDailyRefreshRequired = 1;
