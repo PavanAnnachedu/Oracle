@@ -1,0 +1,1 @@
+Agreed — thanks for the clarification. You’re right, the recommendation is specifically about simplifying watermark assignment, not changing the Dataflow routing or execution order. We’re aligned on keeping Switch for routing and removing the SetVar activities for watermark. Will test the direct @item() reference approach in Dev and share results.”
