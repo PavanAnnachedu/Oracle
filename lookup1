@@ -1,0 +1,8 @@
+Currently for Oracle to fabric we are using dataflow 
+In order to on-board any new table we need to create on more flow and invoke in correct pipeline with incremental variables.
+
+Consumption wise the switch case not going to do any impact over here.
+
+This architecture makes developer control
+
+The consumption is based on how much of amount data we are migrating.
