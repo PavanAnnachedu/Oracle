@@ -1,0 +1,22 @@
+SELECT OBJECT_SCHEMA_NAME(object_id) AS SchemaName,
+       OBJECT_NAME(object_id)        AS ProcName,
+       definition
+FROM sys.sql_modules
+WHERE OBJECT_NAME(object_id) IN
+  ('UpdateWaterMarkSP1','usp_UpdateWaterMark','SP_ETLBatchHeader','usp_InsertTableLog');
+
+
+
+SELECT OBJECT_NAME(object_id) AS ProcName, definition
+FROM sys.sql_modules
+WHERE OBJECT_NAME(object_id) LIKE 'USP_%MONTH_AGG%';
+
+
+SELECT TableName, IsDailyRefreshRequired, IsFullLoad, WaterMarkValue
+FROM Config_Oracle.ConfigETL
+ORDER BY IsDailyRefreshRequired, TableName;
+
+
+SELECT OBJECT_NAME(object_id) AS ViewName, definition
+FROM sys.sql_modules
+WHERE OBJECT_SCHEMA_NAME(object_id) = 'dbo';
