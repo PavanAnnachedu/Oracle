@@ -1,0 +1,9 @@
+SELECT t.TableName,
+       i.TABLE_TYPE,
+       LEFT(m.definition, 200) AS ViewDefinition
+FROM Partner.TableDefinition t
+LEFT JOIN INFORMATION_SCHEMA.TABLES i
+       ON i.TABLE_SCHEMA = 'dbo' AND i.TABLE_NAME = t.TableName
+LEFT JOIN sys.sql_modules m
+       ON m.object_id = OBJECT_ID('dbo.' + t.TableName)
+ORDER BY i.TABLE_TYPE, t.TableName;
