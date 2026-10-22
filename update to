@@ -1,0 +1,5 @@
+Hi John,
+
+I wanted to give you a quick update on the Fabric Workspace Provisioner app. We have successfully connected the web application to the P_AGS_ANALYTICS service principal and it is now able to authenticate and connect to WH_MetaData (34 table definitions loaded in 11 seconds).
+
+Since we don’t have permissions to create new workspaces in the current environment, I am now updating the code to work with existing workspaces instead. The service principal connection has significantly sped up development and I expect to wrap this up soon.
