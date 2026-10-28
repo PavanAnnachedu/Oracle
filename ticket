@@ -1,0 +1,27 @@
+Title:
+Fabric Workspace Provisioner — Web Application Development & Service Principal Integration
+
+Type: User Story / Task
+
+Description:
+Developed a Flask-based web application to automate the new partner onboarding process in Microsoft Fabric. The application connects to the Fabric REST API and WH_MetaData warehouse using the P_AGS_ANALYTICS service principal (Azure Entra App).
+
+Work Completed:
+
+Built Flask web application with end-to-end provisioning flow
+Integrated Service Principal (Azure Entra App) authentication using MSAL
+Connected application to WH_MetaData warehouse — loads 34 table definitions on connect
+Implemented 5-step provisioning: Create Workspace → Assign Capacity → Add Admin → Create Warehouse → Insert Metadata (PartnerMaster + ConfigMaster)
+Added rollback logic — deletes workspace if any step fails
+Tested connection and metadata retrieval successfully
+
+In Progress:
+
+Updating code to support existing workspaces (2.2 scope) — current environment does not have permissions to create new workspaces
+
+Acceptance Criteria:
+
+ App authenticates via Service Principal without user intervention
+ App connects to WH_MetaData and reads TableDefinition
+ Provisioning flow completes end-to-end for new partners
+ Existing workspace support implemented and tested
