@@ -1,0 +1,60 @@
+@CONCAT('WITH BASE_CTE AS
+(
+    SELECT
+        c.Id,
+        p.PartnerName,
+        t.TableName,
+        sc.SourceWarehouse,
+        sc.SourceSchemaName,
+        sc.SourceWarehouseConnectionString,
+        sc.SourceWarehouseId,
+        sc.SourceWorkspaceId,
+        TRY_CONVERT(INT, LTRIM(RTRIM(sp.value))) AS PartnerId,
+        p.PartnerWarehouseName,
+        p.PartnerStagingSchema,
+        p.PartnerSchemaName,
+        p.PartnerConnectionString,
+        p.PartnerWarehouseId,
+        p.PartnerWorkspaceId,
+        t.SourceQuery,
+        t.WaterMarkField,
+        c.WaterMarkValue,
+        c.IsActive,
+        t.IsFullLoad,
+        CASE WHEN t.IsFullLoad = 1 THEN 3 ELSE t.FilterType END AS FilterType,
+        t.PrimaryKey
+    FROM Partner.PartnerMaster p
+        CROSS APPLY STRING_SPLIT(p.PartnerId, '','') sp
+        JOIN Partner.ConfigMaster c
+            ON c.PartnerId = TRY_CONVERT(INT, LTRIM(RTRIM(sp.value)))
+        JOIN Partner.TableDefinition t
+            ON t.TableId = c.TableId
+        JOIN Partner.SourceConnection sc
+            ON sc.SourceWarehouseId = t.SourceWarehouseId
+    WHERE c.IsActive = 1
+      AND t.IsDailyRefreshRequired = ', string(pipeline().parameters.IsDailyRefreshRequired), '
+),
+CTE AS
+(
+    SELECT
+        Id, PartnerName, TableName, SourceWarehouse, SourceSchemaName,
+        SourceWarehouseConnectionString, SourceWarehouseId, SourceWorkspaceId,
+        PartnerId, PartnerWarehouseName, PartnerStagingSchema, PartnerSchemaName,
+        PartnerConnectionString, PartnerWarehouseId, PartnerWorkspaceId,
+        SourceQuery, WaterMarkField, WaterMarkValue, IsActive, FilterType, PrimaryKey, IsFullLoad,
+        CASE
+            WHEN FilterType = 1 THEN REPLACE(SourceQuery, ''{PartnerId}'', CAST(PartnerId AS VARCHAR(50)))
+            WHEN FilterType = 3 THEN REPLACE(SourceQuery, ''{PartnerId}'', CAST(PartnerId AS VARCHAR(50)))
+            WHEN FilterType = 2 THEN CONCAT(SourceQuery, CASE WHEN UPPER(SourceQuery) LIKE ''% WHERE %'' THEN '' AND '' ELSE '' WHERE '' END, WaterMarkField, '' >= '''''', WaterMarkValue, '''''''')
+            ELSE SourceQuery
+        END AS ModifiedSourceQuery
+    FROM BASE_CTE
+)
+SELECT
+    *,
+    CASE
+        WHEN FilterType = 1 AND WaterMarkField <> ''DW_UPD_DTTM''
+        THEN CONCAT(ModifiedSourceQuery, CASE WHEN UPPER(ModifiedSourceQuery) LIKE ''% WHERE %'' THEN '' AND '' ELSE '' WHERE '' END, WaterMarkField, '' >= '''''', WaterMarkValue, '''''''')
+        ELSE ModifiedSourceQuery
+    END AS FinalSourceQuery
+FROM CTE')
