@@ -1,0 +1,118 @@
+CREATE OR ALTER PROC [Config_Oracle].[UpdateWaterMarkSP1]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE
+        @Sql NVARCHAR(MAX),
+        @Id BIGINT,
+        @SchemaName VARCHAR(128),
+        @TableName VARCHAR(128),
+        @WaterMarkField VARCHAR(128),
+        @NewWaterMarkValue DATE;
+
+    -- Drop and recreate processing table
+    DROP TABLE IF EXISTS [WH_MetaData].[Config_Oracle].[WaterMarkProcessing];
+
+    CREATE TABLE [WH_MetaData].[Config_Oracle].[WaterMarkProcessing]
+    (
+        Id BIGINT,
+        SchemaName VARCHAR(128),
+        TableName VARCHAR(128),
+        WaterMarkField VARCHAR(128),
+        NewWaterMarkValue DATE
+    );
+
+    -- Load active tables to process
+    INSERT INTO [WH_MetaData].[Config_Oracle].[WaterMarkProcessing]
+    (
+        Id,
+        SchemaName,
+        TableName,
+        WaterMarkField
+    )
+    SELECT
+        Id,
+        SchemaName,
+        TableName,
+        WaterMarkField
+    FROM [WH_MetaData].[Config_Oracle].[ConfigETL]
+    WHERE IsActive = 1;
+
+    PRINT 'Total tables to process: ' + CAST(@@ROWCOUNT AS VARCHAR(10));
+
+    -- Process each table
+    WHILE EXISTS
+    (
+        SELECT 1
+        FROM [WH_MetaData].[Config_Oracle].[WaterMarkProcessing]
+    )
+    BEGIN
+
+        SELECT TOP (1)
+            @Id = Id,
+            @SchemaName = SchemaName,
+            @TableName = TableName,
+            @WaterMarkField = WaterMarkField
+        FROM [WH_MetaData].[Config_Oracle].[WaterMarkProcessing]
+        ORDER BY Id;
+
+        PRINT 'Processing Id: '
+            + CAST(@Id AS VARCHAR(20))
+            + ' | Table: '
+            + ISNULL(@SchemaName, '')
+            + '.'
+            + ISNULL(@TableName, '');
+
+        SET @NewWaterMarkValue = NULL;
+
+        BEGIN TRY
+
+            -- Get MAX(WaterMarkField) for all tables
+            SET @Sql = N'
+                SELECT @NewWaterMarkValue =
+                    CAST(
+                        MAX(' + QUOTENAME(@WaterMarkField) + N')
+                        AS DATE
+                    )
+                FROM WH_Target.dbo.'
+                + QUOTENAME(@TableName) + N';';
+
+            EXEC sp_executesql
+                @Sql,
+                N'@NewWaterMarkValue DATE OUTPUT',
+                @NewWaterMarkValue = @NewWaterMarkValue OUTPUT;
+
+            -- Update watermark value
+            UPDATE [WH_MetaData].[Config_Oracle].[ConfigETL]
+            SET WaterMarkValue = @NewWaterMarkValue,
+                LastModifiedDate = GETDATE()
+            WHERE Id = @Id;
+
+            PRINT 'SUCCESS - Id '
+                + CAST(@Id AS VARCHAR(20))
+                + ' | New Watermark: '
+                + ISNULL(CONVERT(VARCHAR(10), @NewWaterMarkValue, 120), 'NULL');
+
+        END TRY
+
+        BEGIN CATCH
+
+            PRINT 'FAILED - Id '
+                + CAST(@Id AS VARCHAR(20))
+                + ' | Error: '
+                + ERROR_MESSAGE();
+
+        END CATCH;
+
+        DELETE
+        FROM [WH_MetaData].[Config_Oracle].[WaterMarkProcessing]
+        WHERE Id = @Id;
+
+    END;
+
+    DROP TABLE IF EXISTS [WH_MetaData].[Config_Oracle].[WaterMarkProcessing];
+
+    PRINT 'Watermark Update Process Completed Successfully.';
+
+END;
