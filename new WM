@@ -1,0 +1,43 @@
+CREATE OR ALTER PROC [Partner].[usp_UpdateWaterMark]
+    @BatchId     INT,
+    @PartnerName VARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @LastSuccessSync DATE;
+
+    SELECT @LastSuccessSync =
+        DATEADD(DAY, -1, MIN(CAST(TL.StartTime AS DATE)))
+    FROM Log.TableLog TL
+    WHERE TL.Status = 'Success'
+      AND TL.Layer = 'Partner'
+      AND TL.SchemaName = @PartnerName
+      AND TL.BatchId = @BatchId;
+
+    UPDATE c
+    SET c.WaterMarkValue =
+        CASE
+            WHEN t.TableName = 'V_T_F_ACCOUNT_SNAPSHOT_AAV2'
+                THEN @LastSuccessSync
+            ELSE c.WaterMarkValue
+        END
+    FROM Partner.ConfigMaster c
+    JOIN Partner.PartnerMaster p
+        ON p.PartnerId = c.PartnerId
+    JOIN Partner.TableDefinition t
+        ON t.TableId = c.TableId
+    JOIN Partner.SourceConnection sc
+        ON sc.SourceWarehouseId = t.SourceWarehouseId
+    WHERE p.PartnerName = @PartnerName
+      AND c.IsActive = 1
+      AND t.IsFullLoad = 0
+      AND t.TableName IN (
+            SELECT TL.TableName
+            FROM Log.TableLog TL
+            WHERE TL.Status = 'Success'
+              AND TL.Layer = 'Partner'
+              AND TL.SchemaName = @PartnerName
+              AND TL.BatchId = @BatchId
+        );
+END;
